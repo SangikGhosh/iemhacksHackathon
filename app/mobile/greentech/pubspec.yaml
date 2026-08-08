@@ -34,6 +34,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  go_router: ^17.2.3
 
 dev_dependencies:
   flutter_test:
@@ -73,6 +74,11 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+  fonts:
+    - family: CodecPro
+      fonts:
+        - asset: Assets/Fonts/codec-pro.regular.ttf
+          weight: 400
   # fonts:
   #   - family: Schyler
   #     fonts:
