@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:greentech/Config/ApiConfig.dart';
 import 'package:greentech/Service/ApiService.dart';
-import 'package:greentech/Service/ToastService.dart';
+import 'package:greentech/Service/GoogleAuthService.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Widget/AuthControls.dart';
 import 'package:greentech/Widget/AuthField.dart';
@@ -170,11 +170,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    ToastService.show(
-      'Google sign-in is not configured yet. Use email for now.',
-      ToastType.info,
-      context,
-    );
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      final idToken = await GoogleAuthService.signIn();
+      final session = await ApiService.loginWithGoogle(idToken: idToken);
+      await ref.read(sessionProvider.notifier).adopt(session);
+      if (mounted) context.go('/dashboard');
+    } on GoogleAuthCancelled {
+      return;
+    } on GoogleAuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 

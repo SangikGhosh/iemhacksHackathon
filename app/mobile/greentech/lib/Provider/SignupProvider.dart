@@ -6,7 +6,7 @@ import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Model/AppUser.dart';
 import 'package:greentech/Service/ApiService.dart';
 
-enum SignupStep { email, otp, name, password, role }
+enum SignupStep { email, otp, name, password }
 
 const Duration otpValidity = Duration(minutes: 10);
 const Duration otpResendCooldown = Duration(seconds: 45);
@@ -28,7 +28,6 @@ class SignupState {
     this.otp = '',
     this.fullName = '',
     this.password = '',
-    this.role = Role.citizen,
     this.busy = false,
     this.error,
     this.resendSeconds = 0,
@@ -39,7 +38,6 @@ class SignupState {
   final String otp;
   final String fullName;
   final String password;
-  final Role role;
   final bool busy;
   final String? error;
   final int resendSeconds;
@@ -47,7 +45,7 @@ class SignupState {
   int get stepIndex => SignupStep.values.indexOf(step);
   double get progress => (stepIndex + 1) / SignupStep.values.length;
   bool get isFirstStep => step == SignupStep.email;
-  bool get isLastStep => step == SignupStep.role;
+  bool get isLastStep => step == SignupStep.password;
   bool get canResend => resendSeconds == 0 && !busy;
 
   bool get canAdvance => switch (step) {
@@ -56,7 +54,6 @@ class SignupState {
     SignupStep.name =>
       fullName.trim().length >= 2 && fullName.trim().length <= 100,
     SignupStep.password => passwordIssue(password) == null,
-    SignupStep.role => true,
   };
 
   SignupState copyWith({
@@ -65,7 +62,6 @@ class SignupState {
     String? otp,
     String? fullName,
     String? password,
-    Role? role,
     bool? busy,
     String? error,
     bool clearError = false,
@@ -77,7 +73,6 @@ class SignupState {
       otp: otp ?? this.otp,
       fullName: fullName ?? this.fullName,
       password: password ?? this.password,
-      role: role ?? this.role,
       busy: busy ?? this.busy,
       error: clearError ? null : (error ?? this.error),
       resendSeconds: resendSeconds ?? this.resendSeconds,
@@ -102,8 +97,6 @@ class SignupController extends Notifier<SignupState> {
 
   void setPassword(String value) =>
       state = state.copyWith(password: value, clearError: true);
-
-  void setRole(Role value) => state = state.copyWith(role: value);
 
   void appendOtpDigit(String digit) {
     if (state.otp.length >= 6) return;
@@ -135,10 +128,6 @@ class SignupController extends Notifier<SignupState> {
         return null;
 
       case SignupStep.password:
-        _goTo(SignupStep.role);
-        return null;
-
-      case SignupStep.role:
         return _submit();
     }
   }
@@ -175,7 +164,7 @@ class SignupController extends Notifier<SignupState> {
         fullName: state.fullName,
         password: state.password,
         otp: state.otp,
-        role: state.role,
+        role: Role.citizen,
       );
       await ref.read(sessionProvider.notifier).adopt(session);
       return session;

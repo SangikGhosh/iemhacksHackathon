@@ -4,12 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:greentech/Provider/SignupProvider.dart';
-import 'package:greentech/Model/AppUser.dart';
 import 'package:greentech/Widget/AuthControls.dart';
 import 'package:greentech/Widget/AuthField.dart';
 import 'package:greentech/Widget/AuthShell.dart';
 import 'package:greentech/Widget/OtpInput.dart';
-import 'package:greentech/Widget/RoleCard.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -146,7 +144,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         },
         onSubmitted: (_) => _next(),
       ),
-      SignupStep.role => const _RoleStep(key: ValueKey(SignupStep.role)),
     };
   }
 }
@@ -386,36 +383,6 @@ class _PasswordStep extends ConsumerWidget {
           'Use 8 to 72 characters. Mixing letters, numbers and symbols makes '
           'your account harder to break into.',
         ),
-        ErrorNote(state.error),
-      ],
-    );
-  }
-}
-
-class _RoleStep extends ConsumerWidget {
-  const _RoleStep({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(signupProvider);
-    final notifier = ref.read(signupProvider.notifier);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const StepHeadline(
-          'How will you use\nGreenTech?',
-          subtitle: 'This sets up your dashboard. It can’t be changed later.',
-        ),
-        const SizedBox(height: 22),
-        for (final role in Role.selectable) ...[
-          RoleCard(
-            role: role,
-            selected: state.role == role,
-            onTap: () => notifier.setRole(role),
-          ),
-          const SizedBox(height: 11),
-        ],
         ErrorNote(state.error),
       ],
     );

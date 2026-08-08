@@ -1,26 +1,13 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
-
 class ApiConfig {
   const ApiConfig._();
 
-  static const String _override = String.fromEnvironment('API_BASE_URL');
+  static const String baseUrl =
+      'https://afdc-2409-40e0-1b8-4e8c-137c-f3d1-cfc7-976b.ngrok-free.app';
 
-  static const int _port = 8080;
-
-  static String get baseUrl {
-    if (_override.isNotEmpty) return _stripTrailingSlash(_override);
-    if (kIsWeb) return 'http://localhost:$_port';
-    if (Platform.isAndroid) return 'http://10.0.2.2:$_port';
-    return 'http://localhost:$_port';
-  }
+  static const String googleServerClientId =
+      '819603256526-to4me888iii7rh7tpipjac3jufqtam89.apps.googleusercontent.com';
 
   static const Duration timeout = Duration(seconds: 20);
-
-  static const String googleServerClientId = String.fromEnvironment(
-    'GOOGLE_SERVER_CLIENT_ID',
-  );
 
   static bool get isGoogleEnabled => googleServerClientId.isNotEmpty;
 
@@ -31,7 +18,4 @@ class ApiConfig {
     'Accept': 'application/json',
     if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
   };
-
-  static String _stripTrailingSlash(String value) =>
-      value.endsWith('/') ? value.substring(0, value.length - 1) : value;
 }
