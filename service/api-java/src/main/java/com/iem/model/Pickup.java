@@ -1,5 +1,6 @@
 package com.iem.model;
 
+import com.iem.enums.PickupMode;
 import com.iem.enums.PickupStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,6 +19,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Table(name = "pickups", indexes = {
         @Index(name = "idx_pickups_detection", columnList = "detection_id"),
+        @Index(name = "idx_pickups_point", columnList = "collection_point_id"),
         @Index(name = "idx_pickups_user_created", columnList = "user_id, created_at"),
         @Index(name = "idx_pickups_collector", columnList = "collector_id, created_at"),
         @Index(name = "idx_pickups_status", columnList = "status, created_at")
@@ -45,13 +47,34 @@ public class Pickup {
     @Column(nullable = false, length = 20)
     private PickupStatus status = PickupStatus.REQUESTED;
 
-    @Column(nullable = false, length = 300)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PickupMode mode = PickupMode.DOORSTEP;
+
+    @Column(name = "collection_point_id")
+    @JdbcTypeCode(SqlTypes.UUID)
+    private UUID collectionPointId;
+
+    @Column(name = "municipality_id")
+    @JdbcTypeCode(SqlTypes.UUID)
+    private UUID municipalityId;
+
+    @Column(precision = 10, scale = 3)
+    private BigDecimal estimatedWeightKg;
+
+    @Column(nullable = false)
+    private int rewardPoints;
+
+    @Column(nullable = false)
+    private boolean rewardAwarded;
+
+    @Column(length = 300)
     private String address;
 
     @Column(length = 120)
     private String landmark;
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private String contactPhone;
 
     @Column(length = 300)

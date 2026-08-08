@@ -47,6 +47,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/send-otp", "/auth/register", "/auth/login", "/auth/google").permitAll()
                         .requestMatchers("/health").permitAll()
+                        .requestMatchers("/api/v1/collection-points/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, e) -> {

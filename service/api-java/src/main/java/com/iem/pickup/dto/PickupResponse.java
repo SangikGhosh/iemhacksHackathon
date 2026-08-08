@@ -1,5 +1,6 @@
 package com.iem.pickup.dto;
 
+import com.iem.enums.PickupMode;
 import com.iem.enums.PickupStatus;
 import com.iem.model.Pickup;
 
@@ -11,6 +12,10 @@ public record PickupResponse(
         UUID id,
         UUID detectionId,
         PickupStatus status,
+        PickupMode mode,
+        UUID collectionPointId,
+        int rewardPoints,
+        boolean rewardAwarded,
         boolean cancellable,
         Location location,
         Contact contact,
@@ -49,12 +54,17 @@ public record PickupResponse(
                 p.getId(),
                 p.getDetectionId(),
                 p.getStatus(),
+                p.getMode(),
+                p.getCollectionPointId(),
+                p.getRewardPoints(),
+                p.isRewardAwarded(),
                 p.getStatus() == PickupStatus.REQUESTED,
                 new Location(p.getAddress(), p.getLandmark(), p.getLatitude(), p.getLongitude()),
                 new Contact(p.getContactPhone(), p.getNotes()),
                 new Waste(p.getTotalObjects(), p.getMaterialSummary()),
                 new Money(p.getCurrency(), p.getEstimatedOffer(),
-                        p.getFinalAmount(), p.getFinalWeightKg()),
+                        p.getFinalAmount(),
+                        p.getFinalWeightKg() != null ? p.getFinalWeightKg() : p.getEstimatedWeightKg()),
                 collector,
                 citizen,
                 p.getCancelReason(),

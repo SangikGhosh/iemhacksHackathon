@@ -2,7 +2,10 @@ package com.iem.pickup;
 
 import com.iem.auth.UserRepository;
 import com.iem.detection.DetectionRepository;
+import com.iem.enums.PickupMode;
 import com.iem.enums.PickupStatus;
+import com.iem.geo.CollectionPointService;
+import com.iem.model.CollectionPoint;
 import com.iem.enums.Role;
 import com.iem.exception.ApiException;
 import com.iem.mail.MailService;
@@ -18,6 +21,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -35,15 +40,24 @@ public class PickupService {
     private final DetectionRepository detectionRepository;
     private final UserRepository userRepository;
     private final MailService mailService;
+    private final CollectionPointService collectionPointService;
+    private final int doorstepPointsPerKg;
+    private final int dropOffPointsPerKg;
 
     public PickupService(PickupRepository pickupRepository,
                          DetectionRepository detectionRepository,
                          UserRepository userRepository,
-                         MailService mailService) {
+                         MailService mailService,
+                         CollectionPointService collectionPointService,
+                         @org.springframework.beans.factory.annotation.Value("${rewards.doorstep-points-per-kg:5}") int doorstepPointsPerKg,
+                         @org.springframework.beans.factory.annotation.Value("${rewards.dropoff-points-per-kg:8}") int dropOffPointsPerKg) {
         this.pickupRepository = pickupRepository;
         this.detectionRepository = detectionRepository;
         this.userRepository = userRepository;
         this.mailService = mailService;
+        this.collectionPointService = collectionPointService;
+        this.doorstepPointsPerKg = doorstepPointsPerKg;
+        this.dropOffPointsPerKg = dropOffPointsPerKg;
     }
 
     @Transactional
@@ -65,21 +79,49 @@ public class PickupService {
             throw new ApiException("A pickup already exists for this scan", 409);
         }
 
+        PickupMode mode = request.getMode() == null ? PickupMode.DOORSTEP : request.getMode();
+
         Pickup pickup = new Pickup();
         pickup.setDetectionId(detection.getId());
         pickup.setUserId(userId);
         pickup.setStatus(PickupStatus.REQUESTED);
-        pickup.setAddress(request.getAddress().trim());
-        pickup.setLandmark(request.getLandmark());
-        pickup.setContactPhone(request.getContactPhone().trim());
+        pickup.setMode(mode);
         pickup.setNotes(request.getNotes());
-        pickup.setLatitude(request.getLatitude());
-        pickup.setLongitude(request.getLongitude());
         pickup.setPreferredTime(request.getPreferredTime());
         pickup.setCurrency(detection.getCurrency());
         pickup.setEstimatedOffer(detection.getEstimatedOffer());
         pickup.setTotalObjects(detection.getTotalObjects());
         pickup.setMaterialSummary(materialSummary(detection));
+        pickup.setEstimatedWeightKg(detection.getEstimatedWeightKg());
+
+        if (mode == PickupMode.DROP_OFF) {
+            if (request.getCollectionPointId() == null) {
+                throw new ApiException("collectionPointId is required for a drop-off", 400);
+            }
+            CollectionPoint point = collectionPointService.require(request.getCollectionPointId());
+            pickup.setCollectionPointId(point.getId());
+            pickup.setMunicipalityId(point.getMunicipality().getId());
+            pickup.setAddress(point.getName() + ", " + point.getLocality());
+            pickup.setLandmark(point.getWard());
+            pickup.setLatitude(point.getLat());
+            pickup.setLongitude(point.getLon());
+            pickup.setContactPhone(request.getContactPhone() == null
+                    ? null : request.getContactPhone().trim());
+        } else {
+            if (request.getAddress() == null || request.getAddress().isBlank()) {
+                throw new ApiException("address is required for a doorstep pickup", 400);
+            }
+            if (request.getContactPhone() == null || request.getContactPhone().isBlank()) {
+                throw new ApiException("contactPhone is required for a doorstep pickup", 400);
+            }
+            pickup.setAddress(request.getAddress().trim());
+            pickup.setLandmark(request.getLandmark());
+            pickup.setContactPhone(request.getContactPhone().trim());
+            pickup.setLatitude(request.getLatitude());
+            pickup.setLongitude(request.getLongitude());
+        }
+
+        pickup.setRewardPoints(rewardFor(mode, pickup.getEstimatedWeightKg()));
 
         pickupRepository.save(pickup);
 
@@ -133,6 +175,8 @@ public class PickupService {
         pickup.setFinalWeightKg(request.getFinalWeightKg());
         pickup.setFinalAmount(request.getFinalAmount());
         pickup.setCollectorNotes(request.getCollectorNotes());
+
+        awardReward(pickup, request.getFinalWeightKg());
 
         return toResponse(pickup);
     }
@@ -263,6 +307,40 @@ public class PickupService {
     private PickupResponse.Party party(User user) {
         return user == null ? null
                 : new PickupResponse.Party(user.getId(), user.getFullName(), user.getEmail());
+    }
+
+    private int rewardFor(PickupMode mode, BigDecimal weightKg) {
+        if (weightKg == null || weightKg.signum() <= 0) {
+            return 0;
+        }
+        int rate = mode == PickupMode.DROP_OFF ? dropOffPointsPerKg : doorstepPointsPerKg;
+        return weightKg.multiply(BigDecimal.valueOf(rate))
+                .setScale(0, RoundingMode.HALF_UP)
+                .intValue();
+    }
+
+    private void awardReward(Pickup pickup, BigDecimal finalWeightKg) {
+        if (pickup.isRewardAwarded()) {
+            return;
+        }
+        BigDecimal weight = finalWeightKg != null && finalWeightKg.signum() > 0
+                ? finalWeightKg
+                : pickup.getEstimatedWeightKg();
+
+        int points = rewardFor(pickup.getMode(), weight);
+        pickup.setRewardPoints(points);
+
+        if (points <= 0) {
+            return;
+        }
+
+        userRepository.findById(pickup.getUserId()).ifPresent(user -> {
+            user.setPoints(user.getPoints() + points);
+            userRepository.save(user);
+            pickup.setRewardAwarded(true);
+            log.info("Awarded {} disposal points to user {} for a {} pickup",
+                    points, pickup.getUserId(), pickup.getMode());
+        });
     }
 
     private String materialSummary(Detection detection) {
