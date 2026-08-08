@@ -64,71 +64,108 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: colors.surface,
-      body: SafeArea(
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) => Opacity(
-              opacity: _opacity.value,
-              child: Transform.scale(scale: _scale.value, child: child),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    color: colors.onSurface,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Icon(
-                    Icons.eco_rounded,
-                    color: Colors.white,
-                    size: 42,
-                  ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background picture
+          Image.asset(
+            'assets/image/splash_bg.png',
+            fit: BoxFit.cover,
+          ),
+
+          // Animated Content Layer
+          SafeArea(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) => Opacity(
+                opacity: _opacity.value,
+                child: Transform.scale(
+                  scale: _scale.value,
+                  child: child,
                 ),
-                const SizedBox(height: 30),
-                Text(
-                  'GreenTech',
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.8,
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 30),
+
+                  // Logo
+                  Image.asset(
+                    'assets/image/logo.png',
+                    width: 190,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Innovating for a Sustainable Future',
-                  style: TextStyle(fontSize: 12.5, color: colors.outline),
-                ),
-                const SizedBox(height: 46),
-                SizedBox(
-                  width: 118,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+
+                  const SizedBox(height: 5),
+
+                  // Title
+                  const Text(
+                    'GreenRoute',
+                    style: TextStyle(
+                      fontSize: 38,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF159447),
+                    ),
+                  ),
+
+                  // Tagline
+                  const Text(
+                    '—  WASTE SMART  |  CITY CLEAN  |  FUTURE GREEN  —',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      color: Color(0xFF14517A),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // Subtitle
+                  const Text(
+                    'Together for a\nCleaner Today, Greener Tomorrow.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // Animated Progress Bar bound to Riverpod animation controller
+                  SizedBox(
+                    width: 160,
+                    height: 6,
                     child: AnimatedBuilder(
                       animation: _progress,
-                      builder: (context, _) => LinearProgressIndicator(
-                        value: _progress.value,
-                        minHeight: 2.5,
-                        backgroundColor: colors.outlineVariant,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          colors.onSurface,
+                      builder: (context, _) => Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD8E8D5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FractionallySizedBox(
+                            widthFactor: _progress.value,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3FAE2A),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 35),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
