@@ -19,15 +19,10 @@ class _OnboardingScreenThreeState extends State<OnboardingScreenThree> {
         fit: StackFit.expand,
         children: [
           // 1. Background Image (Tree against Sky)
-          Image.asset(
-            'assets/images/tree_sky_bg.jpg',
-            fit: BoxFit.cover,
-          ),
+          Image.asset('assets/images/tree_sky_bg.jpg', fit: BoxFit.cover),
 
           // Dark overlay to match the moody blue tone & improve contrast
-          Container(
-            color: Colors.black.withOpacity(0.25),
-          ),
+          Container(color: Colors.black.withOpacity(0.25)),
 
           // 2. Foreground UI Layer
           SafeArea(
@@ -41,8 +36,7 @@ class _OnboardingScreenThreeState extends State<OnboardingScreenThree> {
                   Align(
                     alignment: Alignment.topRight,
                     child: GestureDetector(
-                      onTap: () {
-                      },
+                      onTap: () {},
                       child: const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Text(
@@ -126,8 +120,7 @@ class _OnboardingScreenThreeState extends State<OnboardingScreenThree> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: GestureDetector(
-                          onTap: () {
-                          },
+                          onTap: () {},
                           child: const Padding(
                             padding: EdgeInsets.symmetric(
                               vertical: 8.0,

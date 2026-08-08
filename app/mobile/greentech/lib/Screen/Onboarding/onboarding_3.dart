@@ -18,10 +18,7 @@ class _OnboardingScreenTwoState extends State<OnboardingScreenTwo> {
         fit: StackFit.expand,
         children: [
           // 1. Background Image (Forest Path)
-          Image.asset(
-            'assets/images/forest_bg.jpg',
-            fit: BoxFit.cover,
-          ),
+          Image.asset('assets/images/forest_bg.jpg', fit: BoxFit.cover),
 
           // 2. Foreground Content Layer
           SafeArea(
@@ -35,8 +32,7 @@ class _OnboardingScreenTwoState extends State<OnboardingScreenTwo> {
                   Align(
                     alignment: Alignment.topRight,
                     child: GestureDetector(
-                      onTap: () {
-                      },
+                      onTap: () {},
                       child: const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Text(

@@ -2,12 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:greentech/Config/DevConfig.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Screen/Auth/AuthSelectionScreen.dart';
 import 'package:greentech/Screen/Auth/LoginScreen.dart';
 import 'package:greentech/Screen/Auth/SignupScreen.dart';
+import 'package:greentech/Screen/Chat/ChatScreen.dart';
+import 'package:greentech/Screen/Marketplace/ListingsScreen.dart';
 import 'package:greentech/Screen/NotFound/NotFoundScreen.dart';
+import 'package:greentech/Screen/Notifications/NotificationsScreen.dart';
+import 'package:greentech/Screen/Pickup/PickupDetailScreen.dart';
+import 'package:greentech/Screen/Rewards/LeaderboardScreen.dart';
+import 'package:greentech/Screen/Rewards/RewardsScreen.dart';
+import 'package:greentech/Screen/Wallet/WalletScreen.dart';
 import 'package:greentech/Screen/Profile/ProfileScreen.dart';
 import 'package:greentech/Screen/Splash/SplashScreen.dart';
 
@@ -22,6 +28,12 @@ const _protectedRoutes = {
   '/pickup',
   '/settings',
   '/profile',
+  '/leaderboard',
+  '/rewards',
+  '/wallet',
+  '/chat',
+  '/listings',
+  '/notifications',
 };
 
 class _SessionRefresh extends ChangeNotifier {
@@ -48,9 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (signedIn && _authRoutes.contains(location)) return '/home';
 
-      if (!signedIn && _protectedRoutes.contains(location)) {
-        return DevConfig.bypassAuth ? null : '/auth';
-      }
+      if (!signedIn && _protectedRoutes.contains(location)) return '/auth';
 
       return null;
     },
@@ -103,6 +113,42 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/leaderboard',
+        name: 'leaderboard',
+        builder: (context, state) => const LeaderboardScreen(),
+      ),
+      GoRoute(
+        path: '/rewards',
+        name: 'rewards',
+        builder: (context, state) => const RewardsScreen(),
+      ),
+      GoRoute(
+        path: '/wallet',
+        name: 'wallet',
+        builder: (context, state) => const WalletScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: '/listings',
+        name: 'listings',
+        builder: (context, state) => const ListingsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/pickups/:id',
+        name: 'pickupDetail',
+        builder: (context, state) =>
+            PickupDetailScreen(pickupId: state.pathParameters['id'] ?? ''),
       ),
     ],
   );

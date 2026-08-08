@@ -50,9 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     ]);
 
     if (!mounted) return;
-    context.go(
-      ref.read(sessionProvider).value != null ? '/home' : '/auth',
-    );
+    context.go(ref.read(sessionProvider).value != null ? '/home' : '/auth');
   }
 
   @override

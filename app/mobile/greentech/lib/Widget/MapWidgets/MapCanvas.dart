@@ -27,6 +27,8 @@ class MapCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!MapConfig.isEnabled) return const _MapUnavailable();
+
     return FlutterMap(
       mapController: controller,
       options: MapOptions(
@@ -56,6 +58,48 @@ class MapCanvas extends StatelessWidget {
         ...layers,
         const _Attribution(),
       ],
+    );
+  }
+}
+
+class _MapUnavailable extends StatelessWidget {
+  const _MapUnavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: uiFill,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedMapsLocation01,
+                color: uiInkTertiary,
+                size: 26,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Map needs a Mapbox token',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: uiInkSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Run with --dart-define=MAPBOX_ACCESS_TOKEN=…',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11.5, color: uiInkTertiary),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

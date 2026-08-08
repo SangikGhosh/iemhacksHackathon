@@ -1,8 +1,9 @@
 class MapConfig {
   const MapConfig._();
 
-  static const String accessToken =
-      String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
+  static const String accessToken = String.fromEnvironment(
+    'MAPBOX_ACCESS_TOKEN',
+  );
 
   static const String styleId = 'mapbox/streets-v12';
 

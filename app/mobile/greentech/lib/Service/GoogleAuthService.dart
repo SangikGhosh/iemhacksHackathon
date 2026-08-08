@@ -82,12 +82,14 @@ class GoogleAuthService {
     await GoogleSignIn.instance.signOut();
   }
 
-  static String _messageFor(GoogleSignInException error) => switch (error.code) {
-    GoogleSignInExceptionCode.clientConfigurationError ||
-    GoogleSignInExceptionCode
-        .providerConfigurationError => 'Google sign-in is misconfigured for this app.',
-    GoogleSignInExceptionCode.interrupted ||
-    GoogleSignInExceptionCode.uiUnavailable => 'Google sign-in was interrupted. Please try again.',
-    _ => 'Google sign-in failed. Please try again.',
-  };
+  static String _messageFor(GoogleSignInException error) =>
+      switch (error.code) {
+        GoogleSignInExceptionCode.clientConfigurationError ||
+        GoogleSignInExceptionCode.providerConfigurationError =>
+          'Google sign-in is misconfigured for this app.',
+        GoogleSignInExceptionCode.interrupted ||
+        GoogleSignInExceptionCode.uiUnavailable =>
+          'Google sign-in was interrupted. Please try again.',
+        _ => 'Google sign-in failed. Please try again.',
+      };
 }

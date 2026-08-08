@@ -17,10 +17,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         fit: StackFit.expand,
         children: [
           // 1. Background Image (3rd Picture)
-          Image.asset(
-            'assets/images/onboarding_bg.jpg',
-            fit: BoxFit.cover,
-          ),
+          Image.asset('assets/images/onboarding_bg.jpg', fit: BoxFit.cover),
 
           // 2. Foreground Content Layer
           SafeArea(
@@ -34,8 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Align(
                     alignment: Alignment.topRight,
                     child: GestureDetector(
-                      onTap: () {
-                      },
+                      onTap: () {},
                       child: const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Text(
