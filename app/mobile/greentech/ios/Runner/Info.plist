@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Greentech</string>
+	<string>Green Route</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -41,6 +41,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Green Route needs your camera so you can photograph waste and have it identified.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Green Route needs access to your photos so you can pick an existing picture of waste to scan.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Green Route saves the photos you capture while scanning waste.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Green Route does not record audio, but the camera picker requires this permission.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

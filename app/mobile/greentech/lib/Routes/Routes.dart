@@ -7,6 +7,7 @@ import 'package:greentech/Screen/Auth/AuthSelectionScreen.dart';
 import 'package:greentech/Screen/Auth/LoginScreen.dart';
 import 'package:greentech/Screen/Auth/SignupScreen.dart';
 import 'package:greentech/Screen/NotFound/NotFoundScreen.dart';
+import 'package:greentech/Screen/Profile/ProfileScreen.dart';
 import 'package:greentech/Screen/Splash/SplashScreen.dart';
 
 // Import your BottomNavBar
@@ -14,7 +15,13 @@ import 'package:greentech/Widget/BottomNavBar.dart';
 
 const _authRoutes = {'/auth', '/login', '/signup'};
 
-const _protectedRoutes = {'/home', '/image', '/pickup', '/settings'};
+const _protectedRoutes = {
+  '/home',
+  '/image',
+  '/pickup',
+  '/settings',
+  '/profile',
+};
 
 class _SessionRefresh extends ChangeNotifier {
   _SessionRefresh(Ref ref) {
@@ -39,9 +46,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final signedIn = session.value != null;
 
       if (signedIn && _authRoutes.contains(location)) return '/home';
-      
+
       if (!signedIn && _protectedRoutes.contains(location)) return '/auth';
-      
+
       return null;
     },
 
@@ -68,8 +75,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'signup',
         builder: (context, state) => const SignupScreen(),
       ),
-      
-      
+
       GoRoute(
         path: '/home',
         name: 'home',
@@ -89,6 +95,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const BottomNavBar(initialIndex: 3),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
     ],
   );

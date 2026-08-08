@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import 'package:greentech/Config/ApiConfig.dart';
 import 'package:greentech/Model/AppUser.dart';
+import 'package:greentech/Model/Detection.dart';
 import 'package:greentech/Service/UserService.dart';
 
 enum ApiErrorKind { network, server }
@@ -86,6 +88,47 @@ class ApiService {
     return AppUser.fromJson(json);
   }
 
+  static Future<Detection> scanWaste(File image) async {
+    final token = await UserService.getToken();
+    final path = image.path;
+
+    final request = http.MultipartRequest(
+      'POST',
+      ApiConfig.uri('/api/v1/detections'),
+    );
+
+    request.headers.addAll({
+      'Accept': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    });
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'image',
+        path,
+        filename: image.uri.pathSegments.last,
+        contentType: _imageMediaType(path),
+      ),
+    );
+
+    final json = await _send(
+      () async => http.Response.fromStream(await _client.send(request)),
+      timeout: ApiConfig.uploadTimeout,
+    );
+
+    return Detection.fromJson(json);
+  }
+
+  static MediaType _imageMediaType(String path) {
+    final extension = path.toLowerCase().split('.').last;
+    return switch (extension) {
+      'png' => MediaType('image', 'png'),
+      'webp' => MediaType('image', 'webp'),
+      'bmp' => MediaType('image', 'bmp'),
+      _ => MediaType('image', 'jpeg'),
+    };
+  }
+
   static Future<Map<String, dynamic>> _get(String path) async {
     final headers = await _headers();
     return _send(() => _client.get(ApiConfig.uri(path), headers: headers));
@@ -111,11 +154,12 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> _send(
-    Future<http.Response> Function() request,
-  ) async {
+    Future<http.Response> Function() request, {
+    Duration? timeout,
+  }) async {
     final http.Response response;
     try {
-      response = await request().timeout(ApiConfig.timeout);
+      response = await request().timeout(timeout ?? ApiConfig.timeout);
     } on TimeoutException {
       throw const ApiException.network(
         'The server took too long to respond. Please try again.',
@@ -162,7 +206,9 @@ class ApiService {
       403 => "You don't have access to that.",
       404 => 'We could not find what you were looking for.',
       409 => 'That account already exists.',
+      413 => 'That photo is too large. Please use one under 10 MB.',
       502 => 'A downstream service is unavailable. Please try again.',
+      503 => 'The scanning service is busy right now. Please try again.',
       _ => 'Something went wrong on our side ($status). Please try again.',
     };
   }

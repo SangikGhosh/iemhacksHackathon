@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:greentech/Config/ApiConfig.dart';
+import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Service/ApiService.dart';
 import 'package:greentech/Service/GoogleAuthService.dart';
-import 'package:greentech/Provider/SessionProvider.dart';
-import 'package:greentech/Widget/AuthWidgets/AuthControls.dart';
-import 'package:greentech/Widget/AuthWidgets/AuthField.dart';
 import 'package:greentech/Widget/AuthWidgets/AuthShell.dart';
+import 'package:greentech/Widget/GoogleMark.dart';
+import 'package:greentech/Widget/UiKit.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +18,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static final _emailPattern = RegExp(
+    r'^[\w.!#$%&’*+/=?^`{|}~-]+@[\w-]+(\.[\w-]+)+$',
+  );
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordFocus = FocusNode();
@@ -56,10 +60,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _emailPattern.hasMatch(_emailController.text.trim()) &&
       _passwordController.text.isNotEmpty;
 
-  static final _emailPattern = RegExp(
-    r'^[\w.!#$%&’*+/=?^`{|}~-]+@[\w-]+(\.[\w-]+)+$',
-  );
-
   Future<void> _submit() async {
     if (!_isValid) {
       setState(() => _showErrors = true);
@@ -86,89 +86,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AuthShell(
-      progress: _isComplete ? 1 : 0.5,
-      footer: const _SignupPrompt(),
-      bottomBar: StepNavBar(
-        onBack: () => context.go('/auth'),
-        next: NextButton(
-          enabled: _isComplete,
-          busy: _busy,
-          semanticLabel: 'Sign in',
-          onPressed: _submit,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const StepHeadline(
-            'Welcome back',
-            subtitle: 'Sign in to pick up where you left off.',
-          ),
-          const SizedBox(height: 24),
-          AutofillGroup(
-            child: Column(
-              children: [
-                AuthField(
-                  label: 'Email address',
-                  controller: _emailController,
-                  hint: 'you@example.com',
-                  autofocus: true,
-                  enabled: !_busy,
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
-                  errorText:
-                      _showErrors &&
-                          !_emailPattern.hasMatch(_emailController.text.trim())
-                      ? 'Enter a valid email address.'
-                      : null,
-                  onSubmitted: (_) => _passwordFocus.requestFocus(),
-                ),
-                const SizedBox(height: 12),
-                AuthField(
-                  label: 'Password',
-                  controller: _passwordController,
-                  hint: 'Your password',
-                  obscure: true,
-                  enabled: !_busy,
-                  focusNode: _passwordFocus,
-                  textInputAction: TextInputAction.done,
-                  autofillHints: const [AutofillHints.password],
-                  errorText: _showErrors && _passwordController.text.isEmpty
-                      ? 'Enter your password.'
-                      : null,
-                  onSubmitted: (_) => _submit(),
-                ),
-              ],
-            ),
-          ),
-          ErrorNote(_error),
-          if (ApiConfig.isGoogleEnabled) ...[
-            const SizedBox(height: 26),
-            const _OrDivider(),
-            const SizedBox(height: 18),
-            PillButton(
-              label: 'Continue with Google',
-              filled: false,
-              onPressed: _busy ? null : _signInWithGoogle,
-              icon: Icon(
-                Icons.g_mobiledata_rounded,
-                size: 26,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-          const PrivacyNote(
-            'We’ll email you whenever a new device signs in to your account.',
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _signInWithGoogle() async {
     FocusScope.of(context).unfocus();
     setState(() {
@@ -191,52 +108,81 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
 
   @override
   Widget build(BuildContext context) {
-    final line = Theme.of(context).colorScheme.outlineVariant;
-
-    return Row(
-      children: [
-        Expanded(child: Divider(color: line, height: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('or', style: captionStyle(context)),
-        ),
-        Expanded(child: Divider(color: line, height: 1)),
-      ],
-    );
-  }
-}
-
-class _SignupPrompt extends StatelessWidget {
-  const _SignupPrompt();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/signup'),
-      behavior: HitTestBehavior.opaque,
-      child: Text.rich(
-        TextSpan(
-          style: captionStyle(context),
-          children: [
-            const TextSpan(text: 'New to GreenTech? '),
-            TextSpan(
-              text: 'Create an account',
-              style: captionStyle(context).copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
+    return AuthShell(
+      onBack: () => context.go('/auth'),
+      actions: UiPrimaryButton(
+        label: 'Sign in',
+        busy: _busy,
+        onTap: _isComplete ? _submit : null,
+      ),
+      footer: AuthSwitchPrompt(
+        question: 'New to Green Route?',
+        action: 'Create an account',
+        onTap: () => context.go('/signup'),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AuthHeadline(
+            'Welcome back',
+            subtitle: 'Sign in to pick up where you left off.',
+          ),
+          const SizedBox(height: 30),
+          AutofillGroup(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                UiTextField(
+                  label: 'Email address',
+                  controller: _emailController,
+                  hint: 'you@example.com',
+                  enabled: !_busy,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  errorText:
+                      _showErrors &&
+                          !_emailPattern.hasMatch(_emailController.text.trim())
+                      ? 'Enter a valid email address.'
+                      : null,
+                  onSubmitted: (_) => _passwordFocus.requestFocus(),
+                ),
+                const SizedBox(height: 18),
+                UiTextField(
+                  label: 'Password',
+                  controller: _passwordController,
+                  hint: 'Your password',
+                  obscure: true,
+                  enabled: !_busy,
+                  focusNode: _passwordFocus,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  errorText: _showErrors && _passwordController.text.isEmpty
+                      ? 'Enter your password.'
+                      : null,
+                  onSubmitted: (_) => _submit(),
+                ),
+              ],
+            ),
+          ),
+          UiErrorNote(_error),
+          if (ApiConfig.isGoogleEnabled) ...[
+            const SizedBox(height: 28),
+            const UiOrDivider(),
+            const SizedBox(height: 20),
+            UiSecondaryButton(
+              label: 'Continue with Google',
+              onTap: _busy ? null : _signInWithGoogle,
+              leading: const GoogleMark(size: 20),
             ),
           ],
-        ),
-        textAlign: TextAlign.center,
+          const SizedBox(height: 26),
+          const AuthFootnote(
+            'We’ll email you whenever a new device signs in to your account.',
+          ),
+        ],
       ),
     );
   }

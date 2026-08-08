@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:greentech/Widget/UiKit.dart';
+
 class OtpBoxes extends StatelessWidget {
   const OtpBoxes({
     super.key,
@@ -50,31 +52,37 @@ class _Box extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final filled = digit != null;
 
     final borderColor = hasError
-        ? colors.error.withValues(alpha: 0.6)
+        ? uiDanger
         : active
-        ? colors.onSurface
-        : colors.outlineVariant;
+        ? uiInk
+        : filled
+        ? uiInk
+        : uiHairlineStrong;
 
     return AspectRatio(
-      aspectRatio: 0.82,
+      aspectRatio: 0.84,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: uiQuick,
+        curve: uiEase,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: colors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: borderColor, width: active ? 1.6 : 1),
+          color: filled ? uiInk : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: borderColor,
+            width: active || hasError ? 1.8 : 1.2,
+          ),
         ),
         child: Text(
           digit ?? '',
           style: TextStyle(
-            fontSize: 23,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.5,
-            color: colors.onSurface,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.6,
+            color: filled ? Colors.white : uiInk,
           ),
         ),
       ),
@@ -94,62 +102,43 @@ class NumericKeypad extends StatelessWidget {
   final VoidCallback onBackspace;
   final bool enabled;
 
-  static const _letters = {
-    '2': 'ABC',
-    '3': 'DEF',
-    '4': 'GHI',
-    '5': 'JKL',
-    '6': 'MNO',
-    '7': 'PQRS',
-    '8': 'TUV',
-    '9': 'WXYZ',
-  };
-
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: colors.outlineVariant)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final row in const [
-            ['1', '2', '3'],
-            ['4', '5', '6'],
-            ['7', '8', '9'],
-          ])
-            _Row(
-              children: [
-                for (final key in row)
-                  _Key(
-                    label: key,
-                    sublabel: _letters[key],
-                    onTap: enabled ? () => _press(key) : null,
-                  ),
-              ],
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final row in const [
+          ['1', '2', '3'],
+          ['4', '5', '6'],
+          ['7', '8', '9'],
+        ])
           _Row(
             children: [
-              const _Key.blank(),
-              _Key(label: '0', onTap: enabled ? () => _press('0') : null),
-              _Key(
-                icon: Icons.backspace_outlined,
-                flat: true,
-                onTap: enabled
-                    ? () {
-                        HapticFeedback.selectionClick();
-                        onBackspace();
-                      }
-                    : null,
-              ),
+              for (final key in row)
+                _Key(label: key, onTap: enabled ? () => _press(key) : null),
             ],
           ),
-        ],
-      ),
+        _Row(
+          children: [
+            const _Key.blank(),
+            _Key(label: '0', onTap: enabled ? () => _press('0') : null),
+            _Key(
+              transparent: true,
+              onTap: enabled
+                  ? () {
+                      HapticFeedback.selectionClick();
+                      onBackspace();
+                    }
+                  : null,
+              child: const Icon(
+                Icons.backspace_outlined,
+                size: 22,
+                color: uiInk,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -167,12 +156,12 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3.5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           for (var i = 0; i < children.length; i++) ...[
             Expanded(child: children[i]),
-            if (i != children.length - 1) const SizedBox(width: 7),
+            if (i != children.length - 1) const SizedBox(width: 10),
           ],
         ],
       ),
@@ -181,76 +170,48 @@ class _Row extends StatelessWidget {
 }
 
 class _Key extends StatelessWidget {
-  const _Key({
-    this.label,
-    this.sublabel,
-    this.icon,
-    this.onTap,
-    this.flat = false,
-  }) : blank = false;
+  const _Key({this.label, this.child, this.onTap, this.transparent = false})
+    : blank = false;
 
   const _Key.blank()
     : label = null,
-      sublabel = null,
-      icon = null,
+      child = null,
       onTap = null,
-      flat = true,
+      transparent = true,
       blank = true;
 
   final String? label;
-  final String? sublabel;
-  final IconData? icon;
+  final Widget? child;
   final VoidCallback? onTap;
-
-  final bool flat;
+  final bool transparent;
   final bool blank;
 
   @override
   Widget build(BuildContext context) {
-    if (blank) return const SizedBox(height: 48);
+    if (blank) return const SizedBox(height: 54);
 
-    final colors = Theme.of(context).colorScheme;
-
-    return Material(
-      color: flat ? Colors.transparent : colors.surfaceContainerLowest,
-      borderRadius: BorderRadius.circular(11),
-      clipBehavior: Clip.antiAlias,
-      elevation: flat ? 0 : 0.6,
-      shadowColor: Colors.black.withValues(alpha: 0.16),
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: 48,
-          child: Center(
-            child: icon != null
-                ? Icon(icon, size: 22, color: colors.onSurface)
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label!,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w400,
-                          height: 1.05,
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      if (sublabel != null)
-                        Text(
-                          sublabel!,
-                          style: TextStyle(
-                            fontSize: 8.5,
-                            height: 1.2,
-                            letterSpacing: 1.4,
-                            fontWeight: FontWeight.w600,
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-          ),
+    return Pressable(
+      onTap: onTap,
+      scale: 0.94,
+      haptic: false,
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: transparent ? Colors.transparent : uiFill,
+          borderRadius: BorderRadius.circular(16),
         ),
+        alignment: Alignment.center,
+        child: child != null
+            ? child!
+            : Text(
+                label!,
+                style: const TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w600,
+                  color: uiInk,
+                  letterSpacing: -0.5,
+                ),
+              ),
       ),
     );
   }

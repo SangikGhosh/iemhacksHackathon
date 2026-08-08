@@ -33,7 +33,7 @@ class HomeScreen extends StatelessWidget {
               icon: const HugeIcon(
                 icon: HugeIcons.strokeRoundedNotification01,
                 color: Colors.black,
-                size: 28,
+                size: 24,
               ),
               onPressed: () {
                 // Navigator.pushNamed(context, '/notifications');
