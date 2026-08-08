@@ -18,7 +18,7 @@ class AuthSelectionScreen extends StatelessWidget {
             fit: BoxFit.cover,
           ),
 
-          Container(color: Colors.black.withOpacity(0.4)),
+          Container(color: Colors.black.withValues(alpha: 0.4)),
 
           SafeArea(
             child: Padding(
@@ -47,14 +47,14 @@ class AuthSelectionScreen extends StatelessWidget {
                     label: 'Get Started',
                     backgroundColor: Colors.white,
                     textColor: Colors.black,
-                    onPressed: () => context.push('/register-student'),
+                    onPressed: () => context.push('/signup'),
                   ),
                   const SizedBox(height: 16),
                   _SolidButton(
                     label: 'Let’s Get Back In',
                     backgroundColor: Colors.black,
                     textColor: Colors.white,
-                    onPressed: () => context.push('/login-student'),
+                    onPressed: () => context.push('/login'),
                   ),
                   const SizedBox(height: 16),
                 ],
