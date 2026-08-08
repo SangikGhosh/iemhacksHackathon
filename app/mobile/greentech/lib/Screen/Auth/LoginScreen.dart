@@ -6,9 +6,9 @@ import 'package:greentech/Config/ApiConfig.dart';
 import 'package:greentech/Service/ApiService.dart';
 import 'package:greentech/Service/GoogleAuthService.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
-import 'package:greentech/Widget/AuthControls.dart';
-import 'package:greentech/Widget/AuthField.dart';
-import 'package:greentech/Widget/AuthShell.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthControls.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthField.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthShell.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -78,7 +78,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordController.text,
       );
       await ref.read(sessionProvider.notifier).adopt(session);
-      if (mounted) context.go('/dashboard');
+      if (mounted) context.go('/home');
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -180,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final idToken = await GoogleAuthService.signIn();
       final session = await ApiService.loginWithGoogle(idToken: idToken);
       await ref.read(sessionProvider.notifier).adopt(session);
-      if (mounted) context.go('/dashboard');
+      if (mounted) context.go('/home');
     } on GoogleAuthCancelled {
       return;
     } on GoogleAuthException catch (e) {

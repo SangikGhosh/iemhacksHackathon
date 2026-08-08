@@ -104,7 +104,7 @@ Still to be done — the button exists but is not connected to a Google SDK:
 4. Replace the placeholder in `_continueWithGoogle` in
    [`lib/Screen/Auth/AuthSelectionScreen.dart`](lib/Screen/Auth/AuthSelectionScreen.dart)
    with: obtain `idToken` → `ApiService.loginWithGoogle(idToken: ...)` →
-   `ref.read(sessionProvider.notifier).adopt(session)` → `context.go('/dashboard')`
+   `ref.read(sessionProvider.notifier).adopt(session)` → `context.go('/home')`
 
 `ApiService.loginWithGoogle` is already written and matches the endpoint.
 

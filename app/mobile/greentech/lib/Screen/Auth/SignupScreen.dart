@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:greentech/Provider/SignupProvider.dart';
-import 'package:greentech/Widget/AuthControls.dart';
-import 'package:greentech/Widget/AuthField.dart';
-import 'package:greentech/Widget/AuthShell.dart';
-import 'package:greentech/Widget/OtpInput.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthControls.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthField.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthShell.dart';
+import 'package:greentech/Widget/AuthWidgets/OtpInput.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -51,7 +51,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final session = await notifier.next();
 
     if (session != null && mounted) {
-      context.go('/dashboard');
+      context.go('/home');
     }
   }
 

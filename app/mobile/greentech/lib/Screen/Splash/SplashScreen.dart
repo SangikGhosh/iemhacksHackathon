@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:greentech/Provider/SessionProvider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -52,7 +51,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     if (!mounted) return;
     context.go(
-      ref.read(sessionProvider).value != null ? '/dashboard' : '/auth',
+      ref.read(sessionProvider).value != null ? '/home' : '/auth',
     );
   }
 
@@ -68,32 +67,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background picture
-          Image.asset(
-            'assets/image/splash_bg.png',
-            fit: BoxFit.cover,
-          ),
-
+          Image.asset('Assets/image/splash_bg.png', fit: BoxFit.cover),
           // Animated Content Layer
           SafeArea(
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, child) => Opacity(
                 opacity: _opacity.value,
-                child: Transform.scale(
-                  scale: _scale.value,
-                  child: child,
-                ),
+                child: Transform.scale(scale: _scale.value, child: child),
               ),
               child: Column(
                 children: [
                   const SizedBox(height: 30),
 
                   // Logo
-                  Image.asset(
-                    'assets/image/logo.png',
-                    width: 190,
-                  ),
+                  Image.asset('Assets/image/logo.png', width: 190),
 
                   const SizedBox(height: 5),
 

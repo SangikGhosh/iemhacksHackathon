@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:greentech/Widget/AuthShell.dart' show captionStyle;
+import 'package:greentech/Widget/AuthWidgets/AuthShell.dart' show captionStyle;
 
 class AuthField extends StatefulWidget {
   const AuthField({

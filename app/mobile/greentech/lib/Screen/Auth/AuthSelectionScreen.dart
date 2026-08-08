@@ -28,10 +28,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(
-            'https://i.pinimg.com/1200x/2e/58/ac/2e58ace237a6010da4b3f3271cde423c.jpg',
-            fit: BoxFit.cover,
-          ),
+          Image.asset('Assets/image/AuthScreenImage.jpg', fit: BoxFit.cover),
 
           Container(color: Colors.black.withValues(alpha: 0.4)),
 
@@ -77,9 +74,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
                   const SizedBox(height: 20),
 
                   _SolidButton(
-                    label: _busy
-                        ? 'Signing in…'
-                        : 'Continue with Google',
+                    label: _busy ? 'Signing in…' : 'Continue with Google',
                     backgroundColor: Colors.white,
                     textColor: Colors.black,
                     leading: const _GoogleMark(size: 20),
@@ -111,7 +106,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
       final idToken = await GoogleAuthService.signIn();
       final session = await ApiService.loginWithGoogle(idToken: idToken);
       await ref.read(sessionProvider.notifier).adopt(session);
-      if (mounted) context.go('/dashboard');
+      if (mounted) context.go('/home');
     } on GoogleAuthCancelled {
       return;
     } on GoogleAuthException catch (e) {
