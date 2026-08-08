@@ -72,6 +72,10 @@ public class GoogleService {
                     if (existing.getProvider() != AuthProvider.GOOGLE) {
                         throw new ApiException("Account already exists with a different login method", 400);
                     }
+                    if (!existing.isActive()) {
+                        throw new ApiException(
+                                "This account has been deactivated. Contact your administrator.", 403);
+                    }
                     return new Result(existing, false);
                 })
                 .orElseGet(() -> new Result(create(email, payload.getSubject(), name, requestedRole), true));

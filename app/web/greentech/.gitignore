@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local secrets — VITE_MAPBOX_TOKEN etc.
+.env
+.env.local
+!.env.example

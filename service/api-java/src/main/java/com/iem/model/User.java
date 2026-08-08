@@ -9,6 +9,7 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -41,6 +42,9 @@ public class User {
     @Column(nullable = false)
     private int points;
 
+    @Column(precision = 12, scale = 2, nullable = false)
+    private BigDecimal walletBalance = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AuthProvider provider = AuthProvider.LOCAL;
@@ -49,6 +53,20 @@ public class User {
 
     @Column(nullable = false)
     private boolean emailVerified;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Column(name = "municipality_id")
+    @JdbcTypeCode(SqlTypes.UUID)
+    private UUID municipalityId;
+
+    @Column(name = "created_by")
+    @JdbcTypeCode(SqlTypes.UUID)
+    private UUID createdBy;
+
+    @Column(length = 20)
+    private String phone;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;

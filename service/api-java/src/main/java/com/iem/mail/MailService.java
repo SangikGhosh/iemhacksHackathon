@@ -23,16 +23,34 @@ public class MailService {
     private final Resend client;
     private final String senderEmail;
     private final String senderName;
+    private final boolean enabled;
 
     public MailService(@Value("${resend.api.key}") String apiKey,
                        @Value("${resend.sender.email}") String senderEmail,
-                       @Value("${resend.sender.name}") String senderName) {
+                       @Value("${resend.sender.name}") String senderName,
+                       @Value("${mail.enabled:true}") boolean enabled) {
         this.client = new Resend(apiKey);
         this.senderEmail = senderEmail;
         this.senderName = senderName;
+        this.enabled = enabled;
+
+        if (!enabled) {
+            log.warn("MAIL_ENABLED=false - no email will be sent. "
+                    + "Everything else works and OTPs are printed to this log.");
+        }
+    }
+
+    public boolean isEnabled() {
+        return enabled;
     }
 
     private boolean send(String to, String subject, String html) {
+
+        if (!enabled) {
+            log.info("MAIL DISABLED | would send to {} | subject: {}", to, subject);
+            return true;
+        }
+
         try {
             CreateEmailOptions request = CreateEmailOptions.builder()
                     .from(senderName + " <" + senderEmail + ">")

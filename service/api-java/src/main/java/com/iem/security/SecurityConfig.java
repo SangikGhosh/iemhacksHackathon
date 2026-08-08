@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/send-otp", "/auth/register", "/auth/login", "/auth/google").permitAll()
                         .requestMatchers("/health").permitAll()
                         .requestMatchers("/api/v1/collection-points/**").permitAll()
+                        .requestMatchers("/api/v1/leaderboard").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, e) -> {
@@ -74,7 +75,8 @@ public class SecurityConfig {
         }
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin",
+                "X-Requested-With", "ngrok-skip-browser-warning"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

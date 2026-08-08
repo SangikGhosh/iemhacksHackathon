@@ -1,1 +1,288 @@
 @import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   GreenTech design tokens.
+   Neutral paper base with a brand ramp lifted from the app mark: leaf green
+   through to depot blue. Bin colours are product data, not decoration — they
+   are the same four bins the detection service returns.
+--------------------------------------------------------------------------- */
+
+:root {
+  --background: oklch(0.98 0 0);
+  --foreground: oklch(0.14 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.14 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.48 0 0);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.94 0 0);
+  --ring: oklch(0.14 0 0);
+
+  /* Brand ramp — leaf to depot */
+  --brand-50: oklch(0.97 0.03 148);
+  --brand-100: oklch(0.93 0.06 148);
+  --brand-200: oklch(0.87 0.1 148);
+  --brand-300: oklch(0.79 0.14 147);
+  --brand-400: oklch(0.71 0.17 146);
+  --brand-500: oklch(0.63 0.17 148);
+  --brand-600: oklch(0.54 0.15 150);
+  --brand-700: oklch(0.44 0.12 152);
+  --brand-800: oklch(0.35 0.09 154);
+  --brand-900: oklch(0.27 0.07 156);
+
+  --depot-400: oklch(0.62 0.16 258);
+  --depot-500: oklch(0.53 0.19 260);
+  --depot-600: oklch(0.45 0.19 262);
+  --depot-700: oklch(0.38 0.17 264);
+  --depot-900: oklch(0.26 0.11 266);
+
+  /* Segregation bins, straight from WASTE_TYPES */
+  --bin-blue: oklch(0.55 0.18 255);
+  --bin-green: oklch(0.6 0.16 150);
+  --bin-red: oklch(0.58 0.21 27);
+  --bin-grey: oklch(0.55 0.01 260);
+
+  --radius: 0.875rem;
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+  --font-serif: "Playfair Display Variable", "Playfair Display", Georgia, serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  --color-depot-400: var(--depot-400);
+  --color-depot-500: var(--depot-500);
+  --color-depot-600: var(--depot-600);
+  --color-depot-700: var(--depot-700);
+  --color-depot-900: var(--depot-900);
+
+  --color-bin-blue: var(--bin-blue);
+  --color-bin-green: var(--bin-green);
+  --color-bin-red: var(--bin-red);
+  --color-bin-grey: var(--bin-grey);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Stop anchored sections from hiding under the floating header */
+    scroll-padding-top: 7rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* A horizontal scrollbar is the single most common bug in oversized-word
+       layouts like this one. Clip it at the root rather than per section. */
+    overflow-x: clip;
+  }
+
+  /* Media should never be the thing that widens a page */
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--brand-200);
+    color: var(--foreground);
+  }
+}
+
+@layer utilities {
+  /* Oversized background wordmarks — the jotterly signature. */
+  .word-ghost {
+    @apply font-bold tracking-tighter leading-none whitespace-nowrap select-none pointer-events-none;
+    color: oklch(0.955 0 0);
+  }
+
+  .text-gradient-brand {
+    background-image: linear-gradient(
+      100deg,
+      var(--brand-600) 0%,
+      var(--brand-500) 40%,
+      var(--depot-500) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Fine paper grain used on dark panels so flat gradients don't band */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Stroke-draw animation for outline icons */
+@keyframes drawPath {
+  from {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-draw-icon path,
+.animate-draw-icon line,
+.animate-draw-icon polyline,
+.animate-draw-icon circle,
+.animate-draw-icon rect,
+.animate-draw-icon polygon {
+  animation: drawPath 2s ease-out forwards;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) linear infinite;
+}
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+@keyframes border-beam {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.animate-accordion-down {
+  animation: accordion-down 0.25s ease-out;
+}
+.animate-accordion-up {
+  animation: accordion-up 0.25s ease-out;
+}
+
+@keyframes scan-sweep {
+  0%,
+  100% {
+    transform: translateY(-6%);
+  }
+  50% {
+    transform: translateY(106%);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2.4s cubic-bezier(0.24, 0.6, 0.35, 1) infinite;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -240;
+  }
+}
+
+/* Anyone who has asked the OS to calm down gets a calm page. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

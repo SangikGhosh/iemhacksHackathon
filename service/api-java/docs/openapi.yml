@@ -55,6 +55,18 @@ tags:
     description: >
       Collector route planning. Depot to accepted stops and back, ordered by real road
       travel time from the Mapbox Matrix API.
+  - name: Rewards
+    description: >
+      Green Points and the public leaderboard. Points are credited server-side on pickup
+      completion and can never be set by a client.
+  - name: Marketplace
+    description: >
+      Recyclers buy segregated waste from citizens. No real payment rail - the wallet is a
+      dummy ledger so the flow is demonstrable end to end.
+  - name: Admin
+    description: >
+      Municipal and platform administration. Every path requires MUNICIPAL_ADMIN or
+      SUPER_ADMIN; a municipal admin is scoped to their own municipality.
   - name: Health
     description: Liveness
 
@@ -690,6 +702,495 @@ paths:
         '404':
           description: No accepted pickups with a location
 
+  /api/v1/leaderboard:
+    get:
+      tags: [Rewards]
+      summary: Green Points leaderboard
+      description: >
+        Public, so it can be shown before sign-in. Ranked by total points, ties broken by who
+        joined first. Send a token and the response also carries a `me` block with the
+        caller's own rank, even when they are outside the returned page.
+
+
+        `totals` aggregates every scoring user, not just the current page.
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: The leaderboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leaderboard'
+
+  /api/v1/listings:
+    post:
+      tags: [Marketplace]
+      summary: List waste for sale
+      description: >
+        Attach a `detectionId` and the material, weight, image and description are copied from
+        that scan. Without one, supply `material` and `weightKg` yourself. A scan can only have
+        one open listing at a time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateListingRequest'
+      responses:
+        '201':
+          description: Listing created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '400':
+          description: Missing material/weight, non-positive price, or an ineligible scan
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Scan not found or not yours
+        '409':
+          description: That scan is already listed
+
+    get:
+      tags: [Marketplace]
+      summary: Browse open listings
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Open listings, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/listings/mine:
+    get:
+      tags: [Marketplace]
+      summary: My listings or my purchases
+      description: >
+        Scoped by role. A recycler sees what they bought; everyone else sees what they listed.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Listings for this caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/listings/{id}:
+    get:
+      tags: [Marketplace]
+      summary: One listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The listing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Listing not found
+
+  /api/v1/listings/{id}/interested:
+    post:
+      tags: [Marketplace]
+      summary: Buy a listing (recycler)
+      description: >
+        Recyclers only. Claims the listing atomically, marks it SOLD, credits the seller and
+        debits the buyer. If several recyclers tap at the same instant exactly one gets 200 and
+        the rest get 409. A seller cannot buy their own listing.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Sold, money moved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not a recycler, or this is your own listing
+        '404':
+          description: Listing not found
+        '409':
+          description: Already sold or withdrawn
+
+  /api/v1/listings/{id}/cancel:
+    post:
+      tags: [Marketplace]
+      summary: Withdraw a listing (seller)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Withdrawn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Not your listing
+        '409':
+          description: Already sold or already withdrawn
+
+  /api/v1/wallet:
+    get:
+      tags: [Marketplace]
+      summary: Wallet balance and payment history
+      description: >
+        Works for any role. A citizen sees credits from sales, a recycler sees debits from
+        purchases. Green Points are returned alongside the money balance so one call powers a
+        profile screen.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200':
+          description: Balance plus paginated transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/admin/overview:
+    get:
+      tags: [Admin]
+      summary: Dashboard figures
+      description: >
+        Counts, a 14-day scan and pickup trend, bin split, role split, top materials, pickup
+        status and marketplace totals. `scope` is PLATFORM for a super admin and MUNICIPALITY
+        for a municipal admin.
+      responses:
+        '200':
+          description: Dashboard payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOverview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/admin/users:
+    get:
+      tags: [Admin]
+      summary: List, filter and search accounts
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [CITIZEN, COLLECTOR, RECYCLER, MUNICIPAL_ADMIN, SUPER_ADMIN]
+        - name: search
+          in: query
+          description: Matches name or email, case-insensitive.
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200':
+          description: Paginated accounts
+        '400':
+          description: Unknown role
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Admin]
+      summary: Create a staff account
+      description: >
+        A municipal admin may create COLLECTOR and RECYCLER only, and the account inherits their
+        municipality. A super admin may additionally create MUNICIPAL_ADMIN and CITIZEN.
+        Admin-created accounts skip OTP and can log in immediately.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+        '403':
+          description: That role is above what the caller may create
+        '409':
+          description: Email already in use
+
+  /api/v1/admin/users/{id}:
+    patch:
+      tags: [Admin]
+      summary: Enable, disable or edit an account
+      description: >
+        Disabling takes effect immediately - the account's existing token stops working on the
+        next request and a fresh login returns 403.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active: { type: boolean }
+                fullName: { type: string, maxLength: 100 }
+                phone: { type: string, maxLength: 20 }
+                municipalityId:
+                  type: string
+                  format: uuid
+                  description: Super admin only.
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+        '403':
+          description: Outside this admin's scope
+        '404':
+          description: User not found
+
+  /api/v1/admin/system-health:
+    get:
+      tags: [Admin]
+      summary: Dependency health, checked server-side
+      description: >
+        Checks the API, PostgreSQL, the Python detection service, Mapbox and Resend, returning
+        status and latency for each. The detection service is reached server-to-server, so it
+        needs no CORS rule and stays unexposed to the browser.
+      responses:
+        '200':
+          description: One row per dependency
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkedAt: { type: string, format: date-time }
+                  services:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string, example: api-python }
+                        detail: { type: string }
+                        status:
+                          type: string
+                          enum: [HEALTHY, DEGRADED, DOWN, DISABLED]
+                        latencyMs: { type: integer, nullable: true }
+                        note: { type: string }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/admin/collection-points:
+    get:
+      tags: [Admin]
+      summary: Collection points and depots for the map
+      description: >
+        Scoped by role — a municipal admin gets only their own municipality's points and depot,
+        a super admin gets every one. Each point carries municipalityCode and district so a
+        console can filter by area without a second call.
+      responses:
+        '200':
+          description: Points plus the relevant depots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer, example: 155 }
+                  scope:
+                    type: string
+                    enum: [PLATFORM, MUNICIPALITY]
+                  points:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        code: { type: string, example: CP-HMC-001 }
+                        name: { type: string }
+                        locality: { type: string }
+                        ward: { type: string }
+                        type: { type: string }
+                        lat: { type: number }
+                        lon: { type: number }
+                        active: { type: boolean }
+                        municipality: { type: string }
+                        municipalityCode: { type: string, example: HMC }
+                        district: { type: string }
+                  depots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: { type: string }
+                        name: { type: string }
+                        municipality: { type: string }
+                        district: { type: string }
+                        lat: { type: number }
+                        lon: { type: number }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Admin]
+      summary: Add a collection point
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionPointRequest'
+      responses:
+        '201':
+          description: Created, code generated automatically
+        '404':
+          description: Municipality not found
+
+  /api/v1/admin/collection-points/{id}:
+    patch:
+      tags: [Admin]
+      summary: Edit a collection point
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionPointRequest'
+      responses:
+        '200':
+          description: Updated
+        '404':
+          description: Not found
+    delete:
+      tags: [Admin]
+      summary: Retire a collection point
+      description: Soft delete - sets active false so existing pickups keep their history.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Deactivated
+        '404':
+          description: Not found
+
+  /api/v1/admin/municipalities:
+    get:
+      tags: [Admin]
+      summary: List municipalities
+      responses:
+        '200':
+          description: All municipalities
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Admin]
+      summary: Create a municipality (super admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MunicipalityRequest'
+      responses:
+        '201':
+          description: Created
+        '403':
+          description: Super admin only
+        '409':
+          description: That code is taken
+
+  /api/v1/admin/municipalities/{id}:
+    patch:
+      tags: [Admin]
+      summary: Edit a municipality (super admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MunicipalityRequest'
+      responses:
+        '200':
+          description: Updated
+        '403':
+          description: Super admin only
+        '404':
+          description: Not found
+
   /health:
     get:
       tags: [Health]
@@ -879,6 +1380,289 @@ components:
       properties:
         error:
           type: string
+
+    AdminUser:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, nullable: true }
+        role: { type: string }
+        active: { type: boolean }
+        points: { type: integer }
+        walletBalance: { type: number }
+        municipalityId: { type: string, format: uuid, nullable: true }
+        municipalityName: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CreateUserRequest:
+      type: object
+      required: [email, fullName, password, role]
+      properties:
+        email: { type: string, format: email }
+        fullName: { type: string, maxLength: 100 }
+        password: { type: string, minLength: 8, maxLength: 72 }
+        role:
+          type: string
+          enum: [CITIZEN, COLLECTOR, RECYCLER, MUNICIPAL_ADMIN]
+        phone: { type: string, maxLength: 20 }
+        municipalityId:
+          type: string
+          format: uuid
+          description: Defaults to the calling admin's municipality.
+
+    CollectionPointRequest:
+      type: object
+      required: [name, lat, lon]
+      properties:
+        municipalityId: { type: string, format: uuid }
+        municipalityCode: { type: string, example: HMC }
+        name: { type: string, maxLength: 160 }
+        locality: { type: string, maxLength: 120 }
+        ward: { type: string, maxLength: 40 }
+        type:
+          type: string
+          enum: [MRF, BIN_CLUSTER, SCRAP_YARD, COMPOST_HUB]
+        lat: { type: number, example: 22.5671 }
+        lon: { type: number, example: 88.2977 }
+        active: { type: boolean }
+
+    MunicipalityRequest:
+      type: object
+      required: [code, name, district, depotLat, depotLon]
+      properties:
+        code: { type: string, maxLength: 20, example: HMC }
+        name: { type: string, maxLength: 120 }
+        district: { type: string, maxLength: 60 }
+        state: { type: string, default: West Bengal }
+        depotName: { type: string, maxLength: 160 }
+        depotLat: { type: number, example: 22.5892 }
+        depotLon: { type: number, example: 88.3103 }
+        active: { type: boolean }
+
+    AdminOverview:
+      type: object
+      properties:
+        scope:
+          type: string
+          enum: [PLATFORM, MUNICIPALITY]
+        municipalityName: { type: string, nullable: true }
+        stats:
+          type: object
+          properties:
+            totalScans: { type: integer }
+            totalObjects: { type: integer }
+            citizens: { type: integer }
+            collectors: { type: integer }
+            recyclers: { type: integer }
+            pickupsRequested: { type: integer }
+            pickupsCompleted: { type: integer }
+            wasteDivertedKg: { type: number }
+            carbonSavedKg: { type: number }
+            pointsIssued: { type: integer }
+            collectionPoints: { type: integer }
+            marketplaceValue: { type: number }
+        trend:
+          type: array
+          description: 14 days, oldest first.
+          items:
+            type: object
+            properties:
+              day: { type: string, example: 08 Aug }
+              scans: { type: integer }
+              pickups: { type: integer }
+        binSplit:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSlice'
+        roleSplit:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSlice'
+        pickupStatus:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminSlice'
+        topMaterials:
+          type: array
+          items:
+            type: object
+            properties:
+              material: { type: string }
+              count: { type: integer }
+              weightKg: { type: number }
+              value: { type: number }
+        marketplace:
+          type: object
+          properties:
+            openListings: { type: integer }
+            soldListings: { type: integer }
+            tradedValue: { type: number }
+
+    AdminSlice:
+      type: object
+      properties:
+        label: { type: string }
+        value: { type: integer }
+
+    CreateListingRequest:
+      type: object
+      required: [price]
+      properties:
+        detectionId:
+          type: string
+          format: uuid
+          description: Optional. Copies material, weight, image and description from the scan.
+        material:
+          type: string
+          maxLength: 80
+          example: Plastic
+          description: Required when no detectionId is given.
+        weightKg:
+          type: number
+          example: 15
+          description: Required when no detectionId is given.
+        price:
+          type: number
+          minimum: 1
+          example: 120
+        description:
+          type: string
+          maxLength: 400
+        location:
+          type: string
+          maxLength: 160
+          example: Shibpur, Howrah
+        imageUrl:
+          type: string
+          maxLength: 500
+
+    Listing:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [OPEN, SOLD, CANCELLED]
+        material: { type: string, example: PET Bottle x13 }
+        weightKg: { type: number, example: 15.0 }
+        price: { type: number, example: 120 }
+        pricePerKg:
+          type: number
+          nullable: true
+          description: Derived, so a buyer can compare listings.
+          example: 8.0
+        currency: { type: string, example: INR }
+        description: { type: string, nullable: true }
+        imageUrl:
+          type: string
+          nullable: true
+          description: The scan photo when available, otherwise a placeholder.
+        location: { type: string, nullable: true }
+        seller:
+          $ref: '#/components/schemas/ListingParty'
+        buyer:
+          allOf:
+            - $ref: '#/components/schemas/ListingParty'
+          nullable: true
+        mine:
+          type: boolean
+          description: True when the caller is the seller.
+        createdAt: { type: string, format: date-time }
+        soldAt: { type: string, format: date-time, nullable: true }
+
+    ListingParty:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        role: { type: string }
+
+    ListingList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Listing'
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        hasMore: { type: boolean }
+
+    Wallet:
+      type: object
+      properties:
+        balance: { type: number, example: 120.00 }
+        currency: { type: string, example: INR }
+        totalEarned: { type: number, example: 120.00 }
+        totalSpent: { type: number, example: 0 }
+        greenPoints:
+          type: integer
+          description: Reward points, returned here so one call powers a profile screen.
+          example: 65
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              type:
+                type: string
+                enum: [CREDIT, DEBIT]
+              amount: { type: number, example: 120.00 }
+              balanceAfter: { type: number, example: 120.00 }
+              currency: { type: string }
+              reason:
+                type: string
+                enum: [LISTING_SOLD, LISTING_PURCHASED]
+              note: { type: string, example: Sold PET Bottle x13 to Kolkata Recyclers }
+              listingId: { type: string, format: uuid }
+              createdAt: { type: string, format: date-time }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        hasMore: { type: boolean }
+
+    Leaderboard:
+      type: object
+      properties:
+        scope:
+          type: string
+          example: ALL_TIME
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              rank: { type: integer, example: 1 }
+              userId: { type: string, format: uuid }
+              fullName: { type: string, example: Green One }
+              role: { type: string, example: CITIZEN }
+              points: { type: integer, example: 191 }
+              completedPickups: { type: integer, example: 2 }
+              totalWeightKg: { type: number, example: 3.0 }
+        me:
+          type: object
+          nullable: true
+          description: Present only when the caller sends a token.
+          properties:
+            rank: { type: integer, example: 3 }
+            points: { type: integer, example: 89 }
+            completedPickups: { type: integer, example: 1 }
+            ahead:
+              type: integer
+              description: How many users are above you.
+              example: 2
+        totals:
+          type: object
+          properties:
+            citizens: { type: integer, example: 3 }
+            points: { type: integer, example: 943 }
+            weightKg: { type: number, example: 6.0 }
+            completedPickups: { type: integer, example: 4 }
 
     CollectionPoint:
       type: object

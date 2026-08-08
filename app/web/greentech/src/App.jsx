@@ -1,58 +1,31 @@
-import { CardSpotlight } from'./components/CardSpotlight';
-import FeatureCard from './components/Features';
-import logo from './assets/logo.png';
+import { Header } from './components/Header'
+import { Hero } from './components/Hero'
+import { StatsSection } from './components/StatsSection'
+import { MissionSection } from './components/MissionSection'
+import { ScannerDemo } from './components/ScannerDemo'
+import FeaturesSection from './components/Features'
+import { ImpactSection } from './components/Impact'
+import { NetworkSection } from './components/NetworkSection'
+import { RolesSection } from './components/RolesSection'
+import { TechStack } from './components/TechStack'
+import { FAQ } from './components/FAQ'
+import { Footer } from './components/Footer'
 
-function App() {
+export default function Landing() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap:'10px', marginBottom:'50px' }}>
-      <img src={logo} alt="GreenTech Logo" 
-        style={{height:'320px', border:'none',outline:'none', display:'block'}} />
-
-      <h1 style={{ 
-        textAlign: 'center', 
-        color: '#22c55e', 
-        fontSize: '8rem', 
-        fontWeight: 'bold', 
-        marginBottom: '50px' 
-      }}>
-        GreenTech
-      </h1>
-
-      <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap', justifyContent: 'center' }}>
-
-        <CardSpotlight className="h-96 w-96">
-          <p className="text-5xl font-bold relative z-20 mt-2 text-white">
-            For Citizens
-          </p>
-          <div className="text-neutral-200 mt-4 relative z-20">
-            Report waste issues, book pickups, earn rewards.
-          </div>
-        </CardSpotlight>
-
-        <CardSpotlight className="h-96 w-96">
-          <p className="text-5xl font-bold relative z-20 mt-2 text-white">
-            For Drivers / Collectors
-          </p>
-          <div className="text-neutral-200 mt-4 relative z-20">
-            View assigned routes, mark pickups complete, and get real-time navigation.
-          </div>
-        </CardSpotlight>
-
-        <CardSpotlight className="h-96 w-96">
-          <p className="text-5xl font-bold relative z-20 mt-2 text-white">
-            For Admin / Municipality
-          </p>
-          <div className="text-neutral-200 mt-4 relative z-20">
-            Monitor city-wide waste data and manage collector assignments.
-          </div>
-        </CardSpotlight>
-
-      </div>
-      <div style={{ paddingTop:'50px' }}>
-        <FeatureCard />
-      </div>
-    </div>
-  );
+    <main className="min-h-screen bg-background">
+      <Header />
+      <Hero />
+      <StatsSection />
+      <MissionSection />
+      <ScannerDemo />
+      <FeaturesSection />
+      <ImpactSection />
+      <NetworkSection />
+      <RolesSection />
+      <TechStack />
+      <FAQ />
+      <Footer />
+    </main>
+  )
 }
-
-export default App;

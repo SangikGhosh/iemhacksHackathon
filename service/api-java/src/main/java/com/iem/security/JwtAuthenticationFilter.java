@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (jwtService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UUID userId = jwtService.extractUserId(token);
-                userRepository.findById(userId).ifPresent(user -> {
+                userRepository.findById(userId).filter(com.iem.model.User::isActive).ifPresent(user -> {
                     UserPrincipal principal = new UserPrincipal(user);
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                             principal, null, principal.getAuthorities());

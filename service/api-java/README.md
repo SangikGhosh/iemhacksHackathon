@@ -14,6 +14,10 @@ authenticates the caller, forwards the image, stores the result and credits rewa
 - [Auth](#auth)
 - [Detections](#detections)
 - [Pickups](#pickups)
+- [Admin console API](#admin-console-api)
+- [Marketplace and wallet](#marketplace-and-wallet)
+- [Green Points and leaderboard](#green-points-and-leaderboard)
+- [Mail switch](#mail-switch)
 - [Collection points and maps](#collection-points-and-maps)
 - [Route optimisation](#route-optimisation)
 - [Database](#database)
@@ -99,6 +103,21 @@ If it is down, scans return **503** and nothing is stored. Auth endpoints are un
 | GET | `/api/v1/collection-points` | public | all seeded points |
 | GET | `/api/v1/collection-points/municipalities` | public | municipalities and depots |
 | GET | `/api/v1/routes/my-route` | COLLECTOR | optimised route for accepted pickups |
+| GET | `/api/v1/leaderboard` | public | Green Points ranking, `me` block when authenticated |
+| POST | `/api/v1/listings` | Bearer | list waste for sale |
+| GET | `/api/v1/listings` | Bearer | browse open listings |
+| GET | `/api/v1/listings/mine` | Bearer | my listings, or my purchases if RECYCLER |
+| GET | `/api/v1/listings/{id}` | Bearer | one listing |
+| POST | `/api/v1/listings/{id}/interested` | RECYCLER | buy it |
+| POST | `/api/v1/listings/{id}/cancel` | Bearer | seller withdraws |
+| GET | `/api/v1/wallet` | Bearer | balance + payment history |
+| GET | `/api/v1/admin/overview` | ADMIN | dashboard stats, 14-day trend, charts |
+| GET/POST | `/api/v1/admin/users` | ADMIN | list, search, create staff accounts |
+| PATCH | `/api/v1/admin/users/{id}` | ADMIN | enable / disable an account |
+| GET/POST | `/api/v1/admin/collection-points` | ADMIN | manage the point network, scoped by municipality |
+| PATCH/DELETE | `/api/v1/admin/collection-points/{id}` | ADMIN | edit / retire a point |
+| GET | `/api/v1/admin/municipalities` | ADMIN | list municipalities |
+| POST/PATCH | `/api/v1/admin/municipalities` | SUPER_ADMIN | create / edit a municipality |
 | GET | `/health` | public | liveness |
 
 Full spec in [docs/openapi.yml](docs/openapi.yml) — import it into Postman or paste it into
@@ -355,6 +374,201 @@ changing pricing rules later cannot alter an already-agreed request.
 - State is checked before ownership, so an unaccepted pickup reports 409 "accept it first"
   rather than a misleading 403.
 
+## Admin console API
+
+Everything under `/api/v1/admin` requires `MUNICIPAL_ADMIN` or `SUPER_ADMIN`. A citizen gets
+403, an anonymous caller 401.
+
+### Who can create whom
+
+| Actor | Can create |
+| --- | --- |
+| `MUNICIPAL_ADMIN` | `COLLECTOR`, `RECYCLER` — inside their own municipality only |
+| `SUPER_ADMIN` | all of the above, plus `MUNICIPAL_ADMIN` and `CITIZEN`, anywhere |
+
+Nobody can self-register into a privileged role — `/auth/register` is capped at `CITIZEN`,
+`COLLECTOR` and `RECYCLER`, and the two admin roles are rejected there with 403. Admin-created
+accounts skip OTP (`emailVerified = true`), so staff log in immediately with the password the
+admin set.
+
+### Scoping
+
+A municipal admin's **staff** list is filtered to their own `municipality_id`; a super admin sees
+everyone. `overview.scope` returns `MUNICIPALITY` or `PLATFORM` accordingly, so one endpoint
+serves both consoles.
+
+**Citizens are deliberately not scoped.** They self-register and have no `municipality_id`, so
+filtering them by it returned an empty list to every municipal admin. Only `COLLECTOR`,
+`RECYCLER` and `MUNICIPAL_ADMIN` are municipality-owned.
+
+`GET /api/v1/admin/collection-points` is scoped the same way and returns `scope`, the points, and
+the relevant `depots` — a municipal admin gets their 100 points and one depot, a super admin gets
+all 155 and four. Each point carries `municipalityCode` and `district` so the console can offer an
+area filter without a second call.
+
+### System health
+
+`GET /api/v1/admin/system-health` checks each dependency **server-side** and returns status plus
+latency for the API, PostgreSQL, the Python detection service, Mapbox and Resend. The Python
+service is reached server-to-server, so it needs no CORS configuration and stays unexposed to the
+browser. A stopped detection service reports `DOWN`, not a guess.
+
+### Disabling an account
+
+`PATCH /api/v1/admin/users/{id}` with `{"active": false}` takes effect **immediately**:
+
+- the existing JWT stops working on the very next request (the filter drops inactive users)
+- a fresh `POST /auth/login` returns **403**, not a token
+
+Retiring a collection point is a **soft delete** (`active = false`) so pickups that already
+reference it keep their history.
+
+### Seeded admin accounts
+
+`AdminSeeder` runs after the geo seed and creates one super admin and one municipal admin bound
+to `HMC`. **There is no default password** — with `ADMIN_SEED_SUPER_PASSWORD` unset the seeder
+logs a warning and creates nothing, so a known credential can never ship by accident.
+
+> **Do not use `#` in a password inside `.env`.** It starts a comment and silently truncates the
+> value, which produces a "seeded successfully" log followed by a login that always fails.
+
+## Marketplace and wallet
+
+A citizen lists segregated waste, a recycler taps **Interested**, and money moves. There is no
+payment rail — the wallet is a **dummy ledger**, which is enough to demonstrate the whole
+circular-economy loop without integrating a gateway.
+
+### Listing
+
+Two ways to create one:
+
+```bash
+# from a scan - material, weight, image and description are copied across
+curl -X POST /api/v1/listings -H "Authorization: Bearer $TOKEN" \
+  -d '{"detectionId":"66dbf633-...","price":120,"location":"Shibpur, Howrah"}'
+
+# manual, no scan attached
+curl -X POST /api/v1/listings -H "Authorization: Bearer $TOKEN" \
+  -d '{"material":"Plastic","weightKg":15,"price":120,"description":"Clean PET bottles"}'
+```
+
+```json
+{
+  "status": "OPEN", "material": "PET Bottle x13", "weightKg": 0.390,
+  "price": 120.00, "pricePerKg": 307.69, "currency": "INR",
+  "imageUrl": "https://res.cloudinary.com/.../waste.jpg",
+  "description": "13 PET Bottles detected. These are fully recyclable ...",
+  "seller": { "fullName": "Rina Das", "role": "CITIZEN" },
+  "buyer": null, "mine": true
+}
+```
+
+`pricePerKg` is derived so buyers can compare listings of different sizes. `imageUrl` falls
+back to `MARKET_FALLBACK_IMAGE` when the scan has no Cloudinary photo, so a card never renders
+blank. One open listing per scan.
+
+### Buying
+
+`POST /api/v1/listings/{id}/interested` — **recyclers only**. One atomic conditional update
+claims the listing, so if several recyclers tap at the same instant exactly one gets 200 and
+the rest get 409. A seller cannot buy their own listing.
+
+On success, in the same transaction:
+
+```text
+listing        -> SOLD, buyer attached, soldAt stamped
+seller wallet  -> CREDIT  INR 120  reason LISTING_SOLD
+buyer  wallet  -> DEBIT   INR 120  reason LISTING_PURCHASED
+```
+
+### Wallet — `GET /api/v1/wallet`
+
+The payment history, and it works for either side. A citizen sees credits, a recycler sees
+debits.
+
+```json
+{
+  "balance": 120.00, "currency": "INR",
+  "totalEarned": 120.00, "totalSpent": 0, "greenPoints": 65,
+  "transactions": [
+    { "type": "CREDIT", "amount": 120.00, "balanceAfter": 120.00,
+      "reason": "LISTING_SOLD", "note": "Sold PET Bottle x13 to Kolkata Recyclers" }
+  ]
+}
+```
+
+Every row carries `balanceAfter`, so the ledger is auditable without replaying it. Green Points
+are returned next to the money balance so one call powers a profile screen.
+
+**Recyclers start with a dummy float** (`RECYCLER_STARTING_BALANCE`, default 10,000) credited at
+registration. Without it a recycler's first purchase would push them negative, which reads as
+broken in a demo even though a payables ledger genuinely works that way.
+
+## Green Points and leaderboard
+
+Points are credited **server-side only**. A client can never send a points value.
+
+| When | Award |
+| --- | --- |
+| Scan verified | per item, by material (segregation reward) |
+| Pickup **completed** | **+20 flat bonus** plus weight x mode rate |
+| Doorstep rate | 5 points/kg |
+| Drop-off rate | 8 points/kg |
+
+The flat bonus lands on completion regardless of weight, so a tiny drop-off is still worth
+making. A 2 kg drop-off pays `20 + (2 x 8) = 36`; the same weight at the door pays
+`20 + (2 x 5) = 30`.
+
+Weight comes from the collector's scale (`finalWeightKg`) when present, and the scan estimate
+otherwise. `reward_awarded` guards against double-crediting if completion is retried.
+
+All three rates are env-tunable: `COMPLETION_BONUS_POINTS`, `DOORSTEP_POINTS_PER_KG`,
+`DROPOFF_POINTS_PER_KG`.
+
+### GET /api/v1/leaderboard
+
+Public, so it renders before sign-in. Plain SQL over `users` and `pickups` — no cache, no
+scheduled job, nothing to fall out of sync.
+
+```json
+{
+  "scope": "ALL_TIME",
+  "entries": [
+    { "rank": 1, "fullName": "Green One", "role": "CITIZEN",
+      "points": 191, "completedPickups": 2, "totalWeightKg": 3.000 }
+  ],
+  "me": { "rank": 3, "points": 89, "completedPickups": 1, "ahead": 2 },
+  "totals": { "citizens": 3, "points": 943, "weightKg": 6.000, "completedPickups": 4 }
+}
+```
+
+Ranked by points descending, ties broken by who signed up first. Send a token and you also get
+a `me` block with your own rank **even if you are outside the returned page** — that is a
+separate `count(*) where points > yours`, so the client never has to page to find you.
+`totals` aggregates everyone, not just the page. `limit` is clamped to 1-100.
+
+## Mail switch
+
+`MAIL_ENABLED` controls whether anything actually reaches Resend.
+
+| Value | Behaviour |
+| --- | --- |
+| `true` | real emails — OTP, welcome, sign-in alert, pickup available, pickup accepted |
+| `false` | **nothing is sent.** Every flow still works; each suppressed mail is logged as `MAIL DISABLED \| would send to ... \| subject: ...` |
+
+With mail off, signup still works end to end because the OTP is printed to the application log:
+
+```text
+com.iem.auth.OtpService : OTP generated for green1@example.com: 289903
+```
+
+Read the code from your terminal and pass it to `/auth/register`. Critically, `sendOtpEmail`
+does **not** throw its usual 502 when mail is disabled, so `/auth/send-otp` returns 200 and the
+flow continues.
+
+This exists because Resend's free tier has a daily quota, and hitting it used to block every
+signup. Flip to `true` and everything returns to normal with no other change.
+
 ## Collection points and maps
 
 Two collection modes. The citizen chooses per request:
@@ -550,6 +764,17 @@ the Python service.
 scan", which a plain unique constraint cannot express; it is enforced in
 `PickupService.create` instead.
 
+### listings and wallet_transactions
+
+`listings` holds one row per item for sale (`seller_id`, `buyer_id`, `detection_id`, `status`,
+`material`, `weight_kg`, `price`, `currency`, `description`, `image_url`, `location`, plus
+`created_at` / `sold_at` / `cancelled_at`), indexed on status, seller and buyer.
+
+`wallet_transactions` is an append-only ledger: `user_id`, `type`, `amount`, **`balance_after`**,
+`currency`, `reason`, `note`, `listing_id`, `counterparty_id`, `created_at`. Nothing is ever
+updated or deleted, so the history is the source of truth and `users.wallet_balance` is only a
+cached running total.
+
 ### municipalities and collection_points
 
 `municipalities` holds one depot per municipality (`code`, `name`, `district`, `state`,
@@ -618,6 +843,16 @@ still earns 2 points for correct segregation.
 | `VEHICLE_CAPACITY_KG` | 80 | route capacity, by weight |
 | `DOORSTEP_POINTS_PER_KG` | 5 | doorstep reward rate |
 | `DROPOFF_POINTS_PER_KG` | 8 | drop-off reward rate |
+| `COMPLETION_BONUS_POINTS` | 20 | flat Green Points on pickup completion |
+| `MAIL_ENABLED` | true | false suppresses all Resend calls; OTPs go to the log |
+| `RECYCLER_STARTING_BALANCE` | 10000 | dummy wallet float given to RECYCLER accounts |
+| `MARKET_FALLBACK_IMAGE` | a demo URL | shown when a listing has no scan photo |
+| `ADMIN_SEED_ENABLED` | true | create the two admin accounts on boot |
+| `ADMIN_SEED_SUPER_EMAIL` | superadmin@greentech.local | |
+| `ADMIN_SEED_SUPER_PASSWORD` | — | **unset means no super admin is created** |
+| `ADMIN_SEED_MUNICIPAL_EMAIL` | hmc.admin@greentech.local | |
+| `ADMIN_SEED_MUNICIPAL_PASSWORD` | — | **unset means no municipal admin is created** |
+| `ADMIN_SEED_MUNICIPAL_CODE` | HMC | which municipality that admin runs |
 | `MAX_UPLOAD_SIZE` | 10MB | per-file limit |
 | `MAX_REQUEST_SIZE` | 12MB | whole multipart request limit |
 | `APP_CORS_ALLOWED_ORIGINS` | localhost:3000,5173,8080 | comma-separated |
@@ -651,7 +886,7 @@ Validation errors join all field messages into one string, e.g.
 mvn test
 ```
 
-57 tests, all passing. Auth tests use H2; detection tests mock `DetectionClient` so they do
+98 tests, all passing. Auth tests use H2; detection tests mock `DetectionClient` so they do
 not need the Python service running.
 
 | Suite | Covers |
@@ -661,6 +896,10 @@ not need the Python service running.
 | `DetectionApiTests` | 12 tests — see below |
 | `PickupApiTests` | 24 tests — full lifecycle, every guard, and a 6-way accept race |
 | `GeoRoutingTests` | 15 tests — seed integrity, nearest search, both modes, capacity, aggregation |
+| `LeaderboardTests` | 7 tests — bonus, ranking, me block, totals, clamping |
+| `MailToggleTests` | 3 tests — disabled mail never throws and never calls Resend |
+| `MarketplaceTests` | 18 tests — listing, buying, wallet ledger, and a 5-way buy race |
+| `AdminApiTests` | 13 tests — seeding, role limits, scoping, deactivation, point and municipality CRUD |
 
 `DetectionApiTests` covers: both endpoints reject anonymous callers; a scan is stored and
 returns the payload; material rows persist with correct values; an eligible scan credits

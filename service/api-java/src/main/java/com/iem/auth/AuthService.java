@@ -9,6 +9,9 @@ import com.iem.enums.Role;
 import com.iem.exception.ApiException;
 import com.iem.model.User;
 import com.iem.security.JwtService;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.math.BigDecimal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +23,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    private final BigDecimal recyclerStartingBalance;
+
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       @Value("${market.recycler-starting-balance:10000}") BigDecimal recyclerStartingBalance) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.recyclerStartingBalance = recyclerStartingBalance;
     }
 
     @Transactional
@@ -45,6 +52,10 @@ public class AuthService {
         user.setProvider(AuthProvider.LOCAL);
         user.setEmailVerified(true);
 
+        if (user.getRole() == Role.RECYCLER) {
+            user.setWalletBalance(recyclerStartingBalance);
+        }
+
         return userRepository.save(user);
     }
 
@@ -60,6 +71,10 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new ApiException("Invalid credentials", 401);
+        }
+
+        if (!user.isActive()) {
+            throw new ApiException("This account has been deactivated. Contact your administrator.", 403);
         }
 
         return user;

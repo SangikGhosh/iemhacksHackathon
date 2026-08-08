@@ -43,6 +43,7 @@ public class PickupService {
     private final CollectionPointService collectionPointService;
     private final int doorstepPointsPerKg;
     private final int dropOffPointsPerKg;
+    private final int completionBonus;
 
     public PickupService(PickupRepository pickupRepository,
                          DetectionRepository detectionRepository,
@@ -50,7 +51,8 @@ public class PickupService {
                          MailService mailService,
                          CollectionPointService collectionPointService,
                          @org.springframework.beans.factory.annotation.Value("${rewards.doorstep-points-per-kg:5}") int doorstepPointsPerKg,
-                         @org.springframework.beans.factory.annotation.Value("${rewards.dropoff-points-per-kg:8}") int dropOffPointsPerKg) {
+                         @org.springframework.beans.factory.annotation.Value("${rewards.dropoff-points-per-kg:8}") int dropOffPointsPerKg,
+                         @org.springframework.beans.factory.annotation.Value("${rewards.completion-bonus:20}") int completionBonus) {
         this.pickupRepository = pickupRepository;
         this.detectionRepository = detectionRepository;
         this.userRepository = userRepository;
@@ -58,6 +60,7 @@ public class PickupService {
         this.collectionPointService = collectionPointService;
         this.doorstepPointsPerKg = doorstepPointsPerKg;
         this.dropOffPointsPerKg = dropOffPointsPerKg;
+        this.completionBonus = completionBonus;
     }
 
     @Transactional
@@ -327,7 +330,7 @@ public class PickupService {
                 ? finalWeightKg
                 : pickup.getEstimatedWeightKg();
 
-        int points = rewardFor(pickup.getMode(), weight);
+        int points = rewardFor(pickup.getMode(), weight) + completionBonus;
         pickup.setRewardPoints(points);
 
         if (points <= 0) {
@@ -338,8 +341,9 @@ public class PickupService {
             user.setPoints(user.getPoints() + points);
             userRepository.save(user);
             pickup.setRewardAwarded(true);
-            log.info("Awarded {} disposal points to user {} for a {} pickup",
-                    points, pickup.getUserId(), pickup.getMode());
+            log.info("Awarded {} green points to user {} for a completed {} pickup "
+                            + "({} bonus + weight)",
+                    points, pickup.getUserId(), pickup.getMode(), completionBonus);
         });
     }
 

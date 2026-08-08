@@ -26,5 +26,16 @@ public interface CollectionPointRepository extends JpaRepository<CollectionPoint
     @Query("select p from CollectionPoint p join fetch p.municipality m where p.active = true")
     List<CollectionPoint> findAllActive();
 
+    @Query("select p from CollectionPoint p join fetch p.municipality m order by p.code")
+    List<CollectionPoint> findAllWithMunicipality();
+
+    @Query("""
+           select p from CollectionPoint p join fetch p.municipality m
+            where m.id = :municipalityId
+            order by p.code
+           """)
+    List<CollectionPoint> findByMunicipalityIdWithMunicipality(
+            @Param("municipalityId") UUID municipalityId);
+
     long countByMunicipalityId(UUID municipalityId);
 }

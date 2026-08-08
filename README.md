@@ -18,14 +18,20 @@ service/
   api-python/   FastAPI + YOLO · waste detection, pricing, bins          :8000
 app/
   mobile/greentech/   Flutter app (Android / iOS)
-  web/greentech/      React + Vite + Tailwind
+  web/greentech/      React + Vite + Tailwind — landing page + admin consoles
+tasks/
+  collector-task/         what each role can do, which API backs it,
+  recycler-task/          and what is still open
+  municipal-admin-task/
+  super-admin-task/
 ```
 
 Each service has its own README with full API docs:
 
-- **[service/api-java/README.md](service/api-java/README.md)** — auth, pickups, routing, database
+- **[tasks/](tasks/README.md)** — per-role capability matrix, built vs open
+- **[service/api-java/README.md](service/api-java/README.md)** — auth, pickups, routing, admin, database
 - **[service/api-python/README.md](service/api-python/README.md)** — detection model, pricing, tuning
-- **[service/api-java/docs/openapi.yml](service/api-java/docs/openapi.yml)** — 20 endpoints, importable into Postman
+- **[service/api-java/docs/openapi.yml](service/api-java/docs/openapi.yml)** — 28 endpoints, importable into Postman
 
 ---
 
@@ -101,11 +107,15 @@ cp .env.example .env
 # 2 — api
 cd service/api-java
 cp .env.example .env        # JWT_SECRET, GOOGLE_CLIENT_ID, RESEND_API_KEY, MAPBOX_TOKEN, DB
+# set MAIL_ENABLED=false to work without burning the Resend quota -
+# OTPs are then printed in this terminal instead of emailed
 createdb greentech
 mvn spring-boot:run
 
-# 3 — web
-cd app/web/greentech && npm install && npm run dev
+# 3 — web (landing + admin consoles)
+cd app/web/greentech
+cp .env.example .env        # VITE_API_BASE_URL, defaults to :8080
+npm install && npm run dev  # then open /admin/login
 ```
 
 The Java service is the only one exposed publicly. **The Python service has no auth of its
@@ -118,18 +128,42 @@ own** — keep it on localhost or a private network.
 | Action | Reward |
 | --- | --- |
 | Verified segregation (scan) | per item, by material |
-| Doorstep pickup | **5 points/kg** |
-| Drop at a collection point | **8 points/kg** |
+| **Pickup completed** | **+20 Green Points** flat |
+| Doorstep pickup | + 5 points/kg |
+| Drop at a collection point | + 8 points/kg |
 
-Drop-off pays more because it saves the municipality a vehicle trip. Disposal points are
-credited on completion using the collector's weighed figure, never the client's word.
+Drop-off pays more because it saves the municipality a vehicle trip. Points are credited
+server-side on completion using the collector's weighed figure, never the client's word.
+
+`GET /api/v1/leaderboard` ranks everyone by points — public, plain SQL, and it returns your own
+rank when you send a token even if you are off the visible page.
+
+### Admin consoles
+
+Two React dashboards in `app/web/greentech`, both wired to the live API:
+
+| Route | Role | Can do |
+| --- | --- | --- |
+| `/admin/municipal` | `MUNICIPAL_ADMIN` | dashboard, create/disable collectors and recyclers, manage collection points, view pricing |
+| `/admin/super` | `SUPER_ADMIN` | all of the above unscoped, plus create municipalities and municipal admins, leaderboard, service health |
+
+Sign in at `/admin/login`. Two accounts are seeded on first boot — see
+`ADMIN_SEED_*` in `service/api-java/.env`. There is no default password: unset means no
+account is created.
+
+### Marketplace
+
+A citizen lists segregated waste, a recycler taps **Interested**, and a dummy wallet ledger
+moves the money — credit to the seller, debit to the buyer, full payment history for both at
+`GET /api/v1/wallet`. No payment gateway is integrated; the ledger exists so the circular-economy
+loop is demonstrable end to end.
 
 ---
 
 ## Tests
 
 ```bash
-cd service/api-java  && mvn test          # 57 tests
+cd service/api-java  && mvn test          # 98 tests
 cd service/api-python && .venv/bin/python -m pytest   # or the scripted edge suite
 ```
 
