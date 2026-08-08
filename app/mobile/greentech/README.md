@@ -33,14 +33,24 @@ Everything is passed at build time; nothing is committed.
 | --- | --- | --- |
 | `API_BASE_URL` | no | Overrides the auto-detected host. No trailing slash. |
 | `GOOGLE_SERVER_CLIENT_ID` | for Google sign-in | The **Web** OAuth client ID. Empty hides the Google button. |
+| `MAPBOX_ACCESS_TOKEN` | for the map | Mapbox public token (`pk.…`). Empty leaves the map tiles blank. |
 
 ```bash
 flutter run \
   --dart-define=API_BASE_URL=http://192.168.1.42:8080 \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=1234-abc.apps.googleusercontent.com
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=1234-abc.apps.googleusercontent.com \
+  --dart-define=MAPBOX_ACCESS_TOKEN=pk.your_token_here
 ```
 
-Read in [`lib/Config/ApiConfig.dart`](lib/Config/ApiConfig.dart).
+Or keep them in a gitignored file and pass them together:
+
+```bash
+cp dart_define.example.json dart_define.json
+flutter run --dart-define-from-file=dart_define.json
+```
+
+Read in [`lib/Config/ApiConfig.dart`](lib/Config/ApiConfig.dart) and
+[`lib/Config/MapConfig.dart`](lib/Config/MapConfig.dart).
 
 ## Google OAuth setup
 
@@ -104,7 +114,7 @@ Still to be done — the button exists but is not connected to a Google SDK:
 4. Replace the placeholder in `_continueWithGoogle` in
    [`lib/Screen/Auth/AuthSelectionScreen.dart`](lib/Screen/Auth/AuthSelectionScreen.dart)
    with: obtain `idToken` → `ApiService.loginWithGoogle(idToken: ...)` →
-   `ref.read(sessionProvider.notifier).adopt(session)` → `context.go('/dashboard')`
+   `ref.read(sessionProvider.notifier).adopt(session)` → `context.go('/home')`
 
 `ApiService.loginWithGoogle` is already written and matches the endpoint.
 

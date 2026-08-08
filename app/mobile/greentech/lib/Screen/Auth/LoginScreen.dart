@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:greentech/Config/ApiConfig.dart';
+import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Service/ApiService.dart';
 import 'package:greentech/Service/GoogleAuthService.dart';
-import 'package:greentech/Provider/SessionProvider.dart';
-import 'package:greentech/Widget/AuthControls.dart';
-import 'package:greentech/Widget/AuthField.dart';
-import 'package:greentech/Widget/AuthShell.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthShell.dart';
+import 'package:greentech/Widget/GoogleMark.dart';
+import 'package:greentech/Widget/UiKit.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +18,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static final _emailPattern = RegExp(
+    r'^[\w.!#$%&’*+/=?^`{|}~-]+@[\w-]+(\.[\w-]+)+$',
+  );
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordFocus = FocusNode();
@@ -56,10 +60,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _emailPattern.hasMatch(_emailController.text.trim()) &&
       _passwordController.text.isNotEmpty;
 
-  static final _emailPattern = RegExp(
-    r'^[\w.!#$%&’*+/=?^`{|}~-]+@[\w-]+(\.[\w-]+)+$',
-  );
-
   Future<void> _submit() async {
     if (!_isValid) {
       setState(() => _showErrors = true);
@@ -78,7 +78,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordController.text,
       );
       await ref.read(sessionProvider.notifier).adopt(session);
-      if (mounted) context.go('/dashboard');
+      if (mounted) context.go('/home');
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      final idToken = await GoogleAuthService.signIn();
+      final session = await ApiService.loginWithGoogle(idToken: idToken);
+      await ref.read(sessionProvider.notifier).adopt(session);
+      if (mounted) context.go('/home');
+    } on GoogleAuthCancelled {
+      return;
+    } on GoogleAuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -89,33 +112,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      progress: _isComplete ? 1 : 0.5,
-      footer: const _SignupPrompt(),
-      bottomBar: StepNavBar(
-        onBack: () => context.go('/auth'),
-        next: NextButton(
-          enabled: _isComplete,
-          busy: _busy,
-          semanticLabel: 'Sign in',
-          onPressed: _submit,
-        ),
+      onBack: () => context.go('/auth'),
+      actions: UiPrimaryButton(
+        label: 'Sign in',
+        busy: _busy,
+        onTap: _isComplete ? _submit : null,
+      ),
+      footer: AuthSwitchPrompt(
+        question: 'New to Green Route?',
+        action: 'Create an account',
+        onTap: () => context.go('/signup'),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const StepHeadline(
+          const AuthHeadline(
             'Welcome back',
             subtitle: 'Sign in to pick up where you left off.',
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 30),
           AutofillGroup(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AuthField(
+                UiTextField(
                   label: 'Email address',
                   controller: _emailController,
                   hint: 'you@example.com',
-                  autofocus: true,
                   enabled: !_busy,
                   keyboardType: TextInputType.emailAddress,
                   autofillHints: const [AutofillHints.email],
@@ -126,8 +149,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       : null,
                   onSubmitted: (_) => _passwordFocus.requestFocus(),
                 ),
-                const SizedBox(height: 12),
-                AuthField(
+                const SizedBox(height: 18),
+                UiTextField(
                   label: 'Password',
                   controller: _passwordController,
                   hint: 'Your password',
@@ -144,99 +167,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
             ),
           ),
-          ErrorNote(_error),
+          UiErrorNote(_error),
           if (ApiConfig.isGoogleEnabled) ...[
-            const SizedBox(height: 26),
-            const _OrDivider(),
-            const SizedBox(height: 18),
-            PillButton(
+            const SizedBox(height: 28),
+            const UiOrDivider(),
+            const SizedBox(height: 20),
+            UiSecondaryButton(
               label: 'Continue with Google',
-              filled: false,
-              onPressed: _busy ? null : _signInWithGoogle,
-              icon: Icon(
-                Icons.g_mobiledata_rounded,
-                size: 26,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              onTap: _busy ? null : _signInWithGoogle,
+              leading: const GoogleMark(size: 20),
             ),
           ],
-          const SizedBox(height: 20),
-          const PrivacyNote(
+          const SizedBox(height: 26),
+          const AuthFootnote(
             'We’ll email you whenever a new device signs in to your account.',
           ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _signInWithGoogle() async {
-    FocusScope.of(context).unfocus();
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-
-    try {
-      final idToken = await GoogleAuthService.signIn();
-      final session = await ApiService.loginWithGoogle(idToken: idToken);
-      await ref.read(sessionProvider.notifier).adopt(session);
-      if (mounted) context.go('/dashboard');
-    } on GoogleAuthCancelled {
-      return;
-    } on GoogleAuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final line = Theme.of(context).colorScheme.outlineVariant;
-
-    return Row(
-      children: [
-        Expanded(child: Divider(color: line, height: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('or', style: captionStyle(context)),
-        ),
-        Expanded(child: Divider(color: line, height: 1)),
-      ],
-    );
-  }
-}
-
-class _SignupPrompt extends StatelessWidget {
-  const _SignupPrompt();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/signup'),
-      behavior: HitTestBehavior.opaque,
-      child: Text.rich(
-        TextSpan(
-          style: captionStyle(context),
-          children: [
-            const TextSpan(text: 'New to GreenTech? '),
-            TextSpan(
-              text: 'Create an account',
-              style: captionStyle(context).copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ],
-        ),
-        textAlign: TextAlign.center,
       ),
     );
   }

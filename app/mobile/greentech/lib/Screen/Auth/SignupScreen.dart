@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import 'package:greentech/Provider/SignupProvider.dart';
-import 'package:greentech/Widget/AuthControls.dart';
-import 'package:greentech/Widget/AuthField.dart';
-import 'package:greentech/Widget/AuthShell.dart';
-import 'package:greentech/Widget/OtpInput.dart';
+import 'package:greentech/Widget/AuthWidgets/AuthShell.dart';
+import 'package:greentech/Widget/AuthWidgets/OtpInput.dart';
+import 'package:greentech/Widget/AuthWidgets/PasswordChecklist.dart';
+import 'package:greentech/Widget/UiKit.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -50,9 +51,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     FocusScope.of(context).unfocus();
     final session = await notifier.next();
 
-    if (session != null && mounted) {
-      context.go('/dashboard');
-    }
+    if (session != null && mounted) context.go('/home');
   }
 
   void _back() {
@@ -67,6 +66,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(signupProvider);
+    final total = SignupStep.values.length;
 
     return PopScope(
       canPop: false,
@@ -74,24 +74,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         if (!didPop) _back();
       },
       child: AuthShell(
-        progress: state.progress,
-        footer: const _SupportLine(),
-        bottomBar: StepNavBar(
-          onBack: _back,
-          middle: state.step == SignupStep.otp ? const _ResendButton() : null,
-          next: NextButton(
-            enabled: state.canAdvance,
-            busy: state.busy,
-            icon: state.isLastStep
-                ? Icons.check_rounded
-                : Icons.arrow_forward_rounded,
-            semanticLabel: state.isLastStep ? 'Create account' : 'Continue',
-            onPressed: _next,
-          ),
+        onBack: _back,
+        stepLabel: 'Step ${state.stepIndex + 1} of $total',
+        actions: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            UiPrimaryButton(
+              label: state.isLastStep ? 'Create account' : 'Continue',
+              busy: state.busy,
+              onTap: state.canAdvance ? _next : null,
+            ),
+            if (state.step == SignupStep.otp) ...[
+              const SizedBox(height: 12),
+              const _ResendButton(),
+            ],
+          ],
         ),
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
-          switchInCurve: Curves.easeOutCubic,
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: uiEase,
           switchOutCurve: Curves.easeIn,
           layoutBuilder: (current, previous) => Stack(
             alignment: Alignment.topLeft,
@@ -167,18 +168,20 @@ class _EmailStep extends ConsumerWidget {
     final state = ref.watch(signupProvider);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepHeadline("What's your email?"),
-        const SizedBox(height: 24),
+        const AuthHeadline(
+          'What’s your email?',
+          subtitle: 'We’ll send a six-digit code to confirm it’s really you.',
+        ),
+        const SizedBox(height: 30),
         _Listenable(
           field: field,
           onChanged: onChanged,
-          builder: () => AuthField(
+          builder: () => UiTextField(
             label: 'Email address',
             controller: field,
             hint: 'you@example.com',
-            autofocus: true,
             enabled: !state.busy,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
@@ -189,12 +192,11 @@ class _EmailStep extends ConsumerWidget {
             onSubmitted: onSubmitted,
           ),
         ),
-        const SizedBox(height: 14),
-        const PrivacyNote(
-          'We’ll send a six-digit code to confirm it’s really you. '
-          'Your address is never shown to other members.',
+        const SizedBox(height: 18),
+        const AuthFootnote(
+          'Your address is never shown to other members of the community.',
         ),
-        ErrorNote(state.error),
+        UiErrorNote(state.error),
       ],
     );
   }
@@ -211,34 +213,35 @@ class _OtpStep extends ConsumerWidget {
     final notifier = ref.read(signupProvider.notifier);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepHeadline('We just emailed you,\nwhat’s the code?'),
-        const SizedBox(height: 24),
-        OtpBoxes(value: state.otp, hasError: state.error != null),
-        const SizedBox(height: 16),
-        RichText(
-          text: TextSpan(
-            style: captionStyle(context),
+        const AuthHeadline('Enter your code'),
+        const SizedBox(height: 10),
+        Text.rich(
+          TextSpan(
+            style: const TextStyle(
+              fontSize: 15.5,
+              height: 1.45,
+              color: uiInkSecondary,
+              letterSpacing: -0.2,
+            ),
             children: [
-              const TextSpan(text: 'We’ve sent a 6-digit code to '),
+              const TextSpan(text: 'We sent a 6-digit code to '),
               TextSpan(
                 text: state.email,
-                style: captionStyle(context).copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
+                style: const TextStyle(
+                  color: uiInk,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              TextSpan(
-                text:
-                    '. It expires in '
-                    '${otpValidity.inMinutes} minutes.',
-              ),
+              TextSpan(text: '. It expires in ${otpValidity.inMinutes} min.'),
             ],
           ),
         ),
-        ErrorNote(state.error),
-        const SizedBox(height: 22),
+        const SizedBox(height: 28),
+        OtpBoxes(value: state.otp, hasError: state.error != null),
+        UiErrorNote(state.error),
+        const SizedBox(height: 26),
         NumericKeypad(
           enabled: !state.busy,
           onDigit: (digit) {
@@ -259,31 +262,37 @@ class _ResendButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).colorScheme;
     final state = ref.watch(signupProvider);
     final waiting = state.resendSeconds > 0;
 
-    return TextButton.icon(
-      onPressed: state.canResend
+    return Pressable(
+      onTap: state.canResend
           ? ref.read(signupProvider.notifier).resendOtp
           : null,
-      style: TextButton.styleFrom(
-        foregroundColor: colors.onSurface,
-        disabledForegroundColor: colors.outline,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(
-            color: state.canResend
-                ? colors.surfaceContainerHighest
-                : colors.outlineVariant,
-          ),
+      scale: 0.98,
+      child: Container(
+        height: 48,
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedRefresh,
+              color: waiting ? uiInkTertiary : uiInk,
+              size: 17,
+            ),
+            const SizedBox(width: 9),
+            Text(
+              waiting ? 'Resend in ${state.resendSeconds}s' : 'Resend code',
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: waiting ? uiInkTertiary : uiInk,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
         ),
-      ),
-      icon: const Icon(Icons.refresh_rounded, size: 16),
-      label: Text(
-        waiting ? 'Resend in ${state.resendSeconds}s' : 'Resend code',
-        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -300,18 +309,20 @@ class _NameStep extends ConsumerWidget {
     final state = ref.watch(signupProvider);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepHeadline("What's your name?"),
-        const SizedBox(height: 24),
+        const AuthHeadline(
+          'What’s your name?',
+          subtitle: 'This is how collectors will recognise you.',
+        ),
+        const SizedBox(height: 30),
         _Listenable(
           field: field,
           onChanged: ref.read(signupProvider.notifier).setFullName,
-          builder: () => AuthField(
+          builder: () => UiTextField(
             label: 'Full name',
             controller: field,
             hint: 'Alex Smith',
-            autofocus: true,
             enabled: !state.busy,
             keyboardType: TextInputType.name,
             textCapitalization: TextCapitalization.words,
@@ -321,11 +332,11 @@ class _NameStep extends ConsumerWidget {
             onSubmitted: onSubmitted,
           ),
         ),
-        const SizedBox(height: 14),
-        const PrivacyNote(
-          'We’ll only show this to people you interact with on GreenTech.',
+        const SizedBox(height: 18),
+        const AuthFootnote(
+          'We’ll only show this to people you interact with on Green Route.',
         ),
-        ErrorNote(state.error),
+        UiErrorNote(state.error),
       ],
     );
   }
@@ -350,22 +361,24 @@ class _PasswordStep extends ConsumerWidget {
     final state = ref.watch(signupProvider);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepHeadline('Create a password'),
-        const SizedBox(height: 24),
+        const AuthHeadline(
+          'Create a password',
+          subtitle: 'One last step and your account is ready.',
+        ),
+        const SizedBox(height: 30),
         _Listenable(
           field: field,
           onChanged: onChanged,
           builder: () => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AuthField(
+              UiTextField(
                 label: 'Password',
                 controller: field,
                 hint: 'At least 8 characters',
                 obscure: true,
-                autofocus: true,
                 enabled: !state.busy,
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.newPassword],
@@ -373,43 +386,13 @@ class _PasswordStep extends ConsumerWidget {
                 errorText: showError ? passwordIssue(field.text) : null,
                 onSubmitted: onSubmitted,
               ),
-              const SizedBox(height: 14),
-              PasswordStrengthBar(password: field.text),
+              const SizedBox(height: 20),
+              PasswordChecklist(password: field.text),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        const PrivacyNote(
-          'Use 8 to 72 characters. Mixing letters, numbers and symbols makes '
-          'your account harder to break into.',
-        ),
-        ErrorNote(state.error),
+        UiErrorNote(state.error),
       ],
-    );
-  }
-}
-
-class _SupportLine extends StatelessWidget {
-  const _SupportLine();
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        style: captionStyle(context),
-        children: [
-          const TextSpan(text: 'Experiencing issues? Email our team: '),
-          TextSpan(
-            text: 'community@greentech.app',
-            style: captionStyle(context).copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.underline,
-            ),
-          ),
-        ],
-      ),
-      textAlign: TextAlign.center,
     );
   }
 }

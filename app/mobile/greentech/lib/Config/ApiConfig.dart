@@ -9,6 +9,8 @@ class ApiConfig {
 
   static const Duration timeout = Duration(seconds: 20);
 
+  static const Duration uploadTimeout = Duration(seconds: 90);
+
   static bool get isGoogleEnabled => googleServerClientId.isNotEmpty;
 
   static Uri uri(String path) => Uri.parse('$baseUrl$path');

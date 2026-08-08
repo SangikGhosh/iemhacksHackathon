@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:greentech/Config/DevConfig.dart';
 import 'package:greentech/Model/AppUser.dart';
 import 'package:greentech/Service/ApiService.dart';
 import 'package:greentech/Service/UserService.dart';
@@ -7,7 +8,9 @@ import 'package:greentech/Service/UserService.dart';
 class SessionController extends AsyncNotifier<AppUser?> {
   @override
   Future<AppUser?> build() async {
-    if (await UserService.getToken() == null) return null;
+    if (await UserService.getToken() == null) {
+      return DevConfig.bypassAuth ? DevConfig.user : null;
+    }
 
     final cached = await UserService.getUserDetails();
 

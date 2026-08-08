@@ -2,15 +2,27 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:greentech/Config/DevConfig.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Screen/Auth/AuthSelectionScreen.dart';
 import 'package:greentech/Screen/Auth/LoginScreen.dart';
 import 'package:greentech/Screen/Auth/SignupScreen.dart';
-import 'package:greentech/Screen/Dashboard/DashboardScreen.dart';
 import 'package:greentech/Screen/NotFound/NotFoundScreen.dart';
+import 'package:greentech/Screen/Profile/ProfileScreen.dart';
 import 'package:greentech/Screen/Splash/SplashScreen.dart';
 
+// Import your BottomNavBar
+import 'package:greentech/Widget/BottomNavBar.dart';
+
 const _authRoutes = {'/auth', '/login', '/signup'};
+
+const _protectedRoutes = {
+  '/home',
+  '/image',
+  '/pickup',
+  '/settings',
+  '/profile',
+};
 
 class _SessionRefresh extends ChangeNotifier {
   _SessionRefresh(Ref ref) {
@@ -34,8 +46,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final signedIn = session.value != null;
 
-      if (signedIn && _authRoutes.contains(location)) return '/dashboard';
-      if (!signedIn && location.startsWith('/dashboard')) return '/auth';
+      if (signedIn && _authRoutes.contains(location)) return '/home';
+
+      if (!signedIn && _protectedRoutes.contains(location)) {
+        return DevConfig.bypassAuth ? null : '/auth';
+      }
+
       return null;
     },
 
@@ -62,10 +78,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'signup',
         builder: (context, state) => const SignupScreen(),
       ),
+
       GoRoute(
-        path: '/dashboard',
-        name: 'dashboard',
-        builder: (context, state) => const DashboardScreen(),
+        path: '/home',
+        name: 'home',
+        builder: (context, state) => const BottomNavBar(initialIndex: 0),
+      ),
+      GoRoute(
+        path: '/image',
+        name: 'image',
+        builder: (context, state) => const BottomNavBar(initialIndex: 1),
+      ),
+      GoRoute(
+        path: '/pickup',
+        name: 'pickup',
+        builder: (context, state) => const BottomNavBar(initialIndex: 2),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const BottomNavBar(initialIndex: 3),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
     ],
   );
