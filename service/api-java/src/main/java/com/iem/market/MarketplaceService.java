@@ -129,6 +129,16 @@ public class MarketplaceService {
             throw new ApiException("This listing was withdrawn", 409);
         }
 
+        User buyer = userRepository.findById(buyerId)
+                .orElseThrow(() -> new ApiException("Buyer not found", 404));
+
+        if (buyer.getWalletBalance().compareTo(listing.getPrice()) < 0) {
+            throw new ApiException("Your wallet balance is "
+                    + buyer.getWalletBalance() + " " + listing.getCurrency()
+                    + ", which is not enough for this listing at "
+                    + listing.getPrice() + " " + listing.getCurrency(), 402);
+        }
+
         if (listingRepository.claim(listingId, buyerId, Instant.now()) == 0) {
             throw new ApiException("Another recycler has already taken this listing", 409);
         }
@@ -137,8 +147,6 @@ public class MarketplaceService {
 
         User seller = userRepository.findById(sold.getSellerId())
                 .orElseThrow(() -> new ApiException("Seller no longer exists", 404));
-        User buyer = userRepository.findById(buyerId)
-                .orElseThrow(() -> new ApiException("Buyer not found", 404));
 
         credit(seller, sold.getPrice(), REASON_SOLD, sold,
                 "Sold " + sold.getMaterial() + " to " + buyer.getFullName());

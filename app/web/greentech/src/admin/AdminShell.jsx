@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, Bell, LogOut, Menu, Search, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { Assistant } from './Assistant'
 
 /**
  * Chrome shared by both consoles: a fixed sidebar on desktop, a slide-over on
@@ -301,6 +302,8 @@ export function AdminShell({
 
         <main className="px-4 py-6 sm:px-6 sm:py-8">{children}</main>
       </div>
+
+      <Assistant roleLabel={roleLabel} />
     </div>
   )
 }

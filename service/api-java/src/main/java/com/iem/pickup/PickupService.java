@@ -63,6 +63,13 @@ public class PickupService {
         this.completionBonus = completionBonus;
     }
 
+    private UUID resolveMunicipality(UUID userId, Double lat, Double lon) {
+        UUID fromProfile = userRepository.findById(userId)
+                .map(User::getMunicipalityId)
+                .orElse(null);
+        return fromProfile != null ? fromProfile : collectionPointService.municipalityNear(lat, lon);
+    }
+
     @Transactional
     public PickupResponse create(UUID userId, CreatePickupRequest request) {
 
@@ -122,6 +129,8 @@ public class PickupService {
             pickup.setContactPhone(request.getContactPhone().trim());
             pickup.setLatitude(request.getLatitude());
             pickup.setLongitude(request.getLongitude());
+            pickup.setMunicipalityId(resolveMunicipality(userId,
+                    request.getLatitude(), request.getLongitude()));
         }
 
         pickup.setRewardPoints(rewardFor(mode, pickup.getEstimatedWeightKg()));
