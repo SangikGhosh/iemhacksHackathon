@@ -1,0 +1,42 @@
+{
+  "changelists": [
+    {
+      "name": "Default",
+      "files": [
+        ".idea/.gitignore",
+        "service/api-java/.env.example",
+        "service/api-java/.gitignore",
+        "service/api-java/README.md",
+        "service/api-java/pom.xml",
+        "service/api-java/src/main/java/com/iem/ApiApplication.java",
+        "service/api-java/src/main/java/com/iem/auth/AuthController.java",
+        "service/api-java/src/main/java/com/iem/auth/AuthService.java",
+        "service/api-java/src/main/java/com/iem/auth/GoogleService.java",
+        "service/api-java/src/main/java/com/iem/auth/OtpService.java",
+        "service/api-java/src/main/java/com/iem/auth/UserRepository.java",
+        "service/api-java/src/main/java/com/iem/auth/dto/AuthResponse.java",
+        "service/api-java/src/main/java/com/iem/auth/dto/GoogleLoginRequest.java",
+        "service/api-java/src/main/java/com/iem/auth/dto/LoginRequest.java",
+        "service/api-java/src/main/java/com/iem/auth/dto/OtpRequest.java",
+        "service/api-java/src/main/java/com/iem/auth/dto/RegisterRequest.java",
+        "service/api-java/src/main/java/com/iem/auth/dto/UserResponse.java",
+        "service/api-java/src/main/java/com/iem/enums/AuthProvider.java",
+        "service/api-java/src/main/java/com/iem/enums/Role.java",
+        "service/api-java/src/main/java/com/iem/exception/ApiException.java",
+        "service/api-java/src/main/java/com/iem/exception/GlobalExceptionHandler.java",
+        "service/api-java/src/main/java/com/iem/health/HealthController.java",
+        "service/api-java/src/main/java/com/iem/mail/MailService.java",
+        "service/api-java/src/main/java/com/iem/model/User.java",
+        "service/api-java/src/main/java/com/iem/security/JwtAuthenticationFilter.java",
+        "service/api-java/src/main/java/com/iem/security/JwtService.java",
+        "service/api-java/src/main/java/com/iem/security/SecurityConfig.java",
+        "service/api-java/src/main/java/com/iem/security/UserPrincipal.java",
+        "service/api-java/src/main/resources/application.properties",
+        "service/api-java/src/test/java/com/iem/ApiApplicationTests.java",
+        "service/api-java/src/test/java/com/iem/AuthEndpointTests.java",
+        "service/api-java/src/test/resources/application-test.properties"
+      ]
+    }
+  ],
+  "active": "Default"
+}
