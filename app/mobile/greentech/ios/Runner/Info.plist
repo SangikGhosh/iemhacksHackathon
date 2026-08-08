@@ -49,6 +49,8 @@
 	<string>Green Route saves the photos you capture while scanning waste.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Green Route does not record audio, but the camera picker requires this permission.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Green Route uses your location to show the drop-off points closest to you.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -7,6 +7,8 @@ import 'package:http_parser/http_parser.dart';
 
 import 'package:greentech/Config/ApiConfig.dart';
 import 'package:greentech/Model/AppUser.dart';
+import 'package:greentech/Model/CollectionPoint.dart';
+import 'package:greentech/Model/CollectorRoute.dart';
 import 'package:greentech/Model/Detection.dart';
 import 'package:greentech/Service/UserService.dart';
 
@@ -118,6 +120,56 @@ class ApiService {
 
     return Detection.fromJson(json);
   }
+
+  static Future<List<CollectionPoint>> collectionPoints() async {
+    final json = await _get('/api/v1/collection-points');
+    return _pointsFrom(json);
+  }
+
+  static Future<List<CollectionPoint>> nearestCollectionPoints({
+    required double lat,
+    required double lon,
+    int limit = 5,
+  }) async {
+    try {
+      final json = await _get(
+        '/api/v1/collection-points/nearest?lat=$lat&lon=$lon&limit=$limit',
+      );
+      return _pointsFrom(json);
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return const [];
+      rethrow;
+    }
+  }
+
+  static Future<List<Municipality>> municipalities() async {
+    final json = await _get('/api/v1/collection-points/municipalities');
+    return (json['municipalities'] as List?)
+            ?.whereType<Map>()
+            .map((item) => Municipality.fromJson(item.cast<String, dynamic>()))
+            .toList() ??
+        const [];
+  }
+
+  static Future<CollectorRoute?> myRoute({String? municipalityCode}) async {
+    final query = municipalityCode == null || municipalityCode.isEmpty
+        ? ''
+        : '?municipalityCode=$municipalityCode';
+    try {
+      final json = await _get('/api/v1/routes/my-route$query');
+      return CollectorRoute.fromJson(json);
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  static List<CollectionPoint> _pointsFrom(Map<String, dynamic> json) =>
+      (json['points'] as List?)
+          ?.whereType<Map>()
+          .map((item) => CollectionPoint.fromJson(item.cast<String, dynamic>()))
+          .toList() ??
+      const [];
 
   static MediaType _imageMediaType(String path) {
     final extension = path.toLowerCase().split('.').last;

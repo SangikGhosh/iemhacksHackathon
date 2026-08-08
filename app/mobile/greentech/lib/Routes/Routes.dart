@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:greentech/Config/DevConfig.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Screen/Auth/AuthSelectionScreen.dart';
 import 'package:greentech/Screen/Auth/LoginScreen.dart';
@@ -47,7 +48,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (signedIn && _authRoutes.contains(location)) return '/home';
 
-      if (!signedIn && _protectedRoutes.contains(location)) return '/auth';
+      if (!signedIn && _protectedRoutes.contains(location)) {
+        return DevConfig.bypassAuth ? null : '/auth';
+      }
 
       return null;
     },
