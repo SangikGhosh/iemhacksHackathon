@@ -40,6 +40,7 @@ def _empty_response(ignored_labels):
             "Please re-click the image with the waste clearly visible."
         )
     return {
+        "eligible": False,
         "status": STATUS_NO_WASTE,
         "message": message,
         "actionRequired": ACTION_RECLICK,
@@ -312,6 +313,7 @@ def assess(objects, ignored_labels):
     environment = _environment(materials)
 
     return {
+        "eligible": True,
         "status": status,
         "message": message,
         "actionRequired": action,

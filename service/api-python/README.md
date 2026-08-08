@@ -177,6 +177,7 @@ Errors return `{"detail": "..."}`:
 ```json
 {
   "success": true,
+  "eligible": true,
   "status": "MANUAL_PRICING_REQUIRED",
   "message": "13 waste items detected across 1 material. Offer up to INR 11.21; the collector will weigh and confirm the final price.",
   "actionRequired": "COLLECTOR_SETS_PRICE",
@@ -226,6 +227,7 @@ Errors return `{"detail": "..."}`:
 | Block | Purpose |
 | --- | --- |
 | `success` | always `true` for a 200 — outcomes live in `status`, not here |
+| `eligible` | can this submission proceed, or must the user retake the photo |
 | `status` / `actionRequired` | what happened, and what the app should do next |
 | `message` | one-line text safe to show the user as-is |
 | `timestamp` | UTC ISO-8601, for audit logs |
@@ -302,12 +304,37 @@ renaming the field to `disposalAdvice` if that matters to you.
 A detection can succeed technically and still be unusable. All of these return HTTP 200 with
 `success: true` — they are outcomes, not failures.
 
-| status | actionRequired | when |
-| --- | --- | --- |
-| `OK` | `null` | one material, confident, 5 items or fewer |
-| `NO_WASTE_DETECTED` | `RECLICK_IMAGE` | no waste found (person, animal, cartoon, empty scene) |
-| `LOW_CONFIDENCE` | `RECLICK_IMAGE` | waste found but nothing above `MIN_TRUST_CONFIDENCE` |
-| `MANUAL_PRICING_REQUIRED` | `COLLECTOR_SETS_PRICE` | mixed materials, or more than `MANUAL_PRICING_ITEMS` |
+| status | eligible | actionRequired | when |
+| --- | --- | --- | --- |
+| `OK` | `true` | `null` | one material, confident, 5 items or fewer |
+| `MANUAL_PRICING_REQUIRED` | `true` | `COLLECTOR_SETS_PRICE` | mixed materials, or more than `MANUAL_PRICING_ITEMS` |
+| `NO_WASTE_DETECTED` | `false` | `RECLICK_IMAGE` | no waste found (person, animal, empty scene) |
+| `LOW_CONFIDENCE` | `false` | `RECLICK_IMAGE` | waste found but nothing above `MIN_TRUST_CONFIDENCE` |
+
+### eligible
+
+The single boolean a frontend needs. `false` means **this photo cannot be submitted — show
+`message` and reopen the camera**. No need to enumerate status values on the client:
+
+```js
+const res = await fetch("/api/v1/detect", { method: "POST", body: form }).then(r => r.json())
+
+if (!res.eligible) {
+  showRetakeScreen(res.message)      // "No garbage detected. The image shows person. ..."
+  return
+}
+
+showResult(res.summary, res.offer, res.objects)
+```
+
+`eligible` is derived, not independent: it is `false` exactly when `actionRequired` is
+`RECLICK_IMAGE`. It exists so the client has one boolean to branch on instead of matching
+against a growing list of statuses — new non-submittable states can be added later without
+breaking existing clients.
+
+Note the split: `MANUAL_PRICING_REQUIRED` is `eligible: true`. Real waste was found, the user
+can submit and earn points; only the final price is deferred to the collector. Do not treat it
+as a failure.
 
 `ignoredObjects` is what makes the message specific — "No garbage detected. The image shows
 person." rather than a blank failure.
@@ -637,8 +664,8 @@ truncated JPEG -> 400; missing field -> 422; 6000x6000 PNG -> 200; PNG input wor
 The Java auth/rewards service (`service/api-java`) is the system of record. Suggested flow:
 
 1. Mobile app uploads the photo to `POST /api/v1/detect`.
-2. Java reads `status` and `actionRequired` first — if `RECLICK_IMAGE`, show `message` and
-   stop; award nothing.
+2. Java checks `eligible` first — if `false`, return `message` to the app so it can prompt a
+   retake, and award nothing.
 3. On `OK` or `MANUAL_PRICING_REQUIRED`, persist the detection with `imageUrl`, `summary`,
    `materials[]` and `offer`.
 4. Add `totalRewardPoints` to `user.points`.

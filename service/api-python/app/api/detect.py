@@ -51,6 +51,7 @@ async def detect(image: UploadFile = File(...)):
 
     response = {
         "success": True,
+        "eligible": assessment["eligible"],
         "status": assessment["status"],
         "message": assessment["message"],
         "actionRequired": assessment["actionRequired"],
