@@ -55,7 +55,9 @@ def resize(image, max_side=MAX_SIDE):
         return image, 1.0
 
     scale = max_side / longest
-    resized = image.resize((int(width * scale), int(height * scale)), Image.LANCZOS)
+    new_width = max(int(width * scale), 1)
+    new_height = max(int(height * scale), 1)
+    resized = image.resize((new_width, new_height), Image.LANCZOS)
     return resized, scale
 
 

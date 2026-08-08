@@ -38,6 +38,15 @@ tags:
     description: OTP, registration, login, Google sign-in
   - name: User
     description: The authenticated user
+  - name: Detections
+    description: >
+      Waste scanning. The image is forwarded to the Python detection service, the result is
+      stored against the caller, and reward points are credited when the scan is eligible.
+  - name: Pickups
+    description: >
+      Doorstep collection. A citizen turns an eligible scan into a pickup request, collectors
+      see it in an open feed and claim it first-come-first-served. Once a collector accepts,
+      the citizen can no longer cancel.
   - name: Health
     description: Liveness
 
@@ -226,6 +235,330 @@ paths:
         '404':
           description: The token is valid but the account no longer exists
 
+  /api/v1/detections:
+    post:
+      tags: [Detections]
+      summary: Scan a waste photo
+      description: >
+        Uploads a photo, runs detection, stores the result against the authenticated user and
+        credits reward points when `eligible` is true. Ineligible scans are still stored (so
+        history is complete) but award nothing.
+
+
+        A non-`OK` status is not a failure — check `eligible` first. `false` means the photo
+        cannot be submitted and the app should show `message` and reopen the camera.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG, WEBP or BMP, max 10 MB.
+      responses:
+        '200':
+          description: Scan completed and stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detection'
+        '400':
+          description: Missing part, empty file, or an unsupported image type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingPart:
+                  value:
+                    error: "Required part 'image' is missing"
+                badType:
+                  value:
+                    error: Unsupported image type, use JPEG, PNG, WEBP or BMP
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Image larger than 10 MB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: The Python detection service is unreachable. Nothing is stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Detection service is unavailable. Please try again.
+
+    get:
+      tags: [Detections]
+      summary: Scan history for the authenticated user
+      description: >
+        Newest first, paginated. Scoped to the caller — a user can never see another user's
+        scans. `totals` is computed across the user's entire history, not just the current
+        page, so a dashboard needs one call rather than walking every page.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectionHistory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/pickups:
+    post:
+      tags: [Pickups]
+      summary: Request a pickup for a scan
+      description: >
+        Turns an eligible scan into a collection request and emails every registered collector.
+        The waste details and estimated offer are copied from the scan at request time, so a
+        later change to pricing rules cannot alter an agreed request.
+
+
+        One active pickup per scan. A cancelled pickup frees the scan to be requested again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePickupRequest'
+      responses:
+        '201':
+          description: Pickup requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pickup'
+        '400':
+          description: Validation failure, or the scan found no waste to collect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: This scan has no waste to collect. Please scan the waste again.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Scan not found, or it belongs to another user
+        '409':
+          description: An active pickup already exists for this scan
+
+    get:
+      tags: [Pickups]
+      summary: Pickup history
+      description: >
+        Scoped by role automatically. A citizen sees the pickups they requested; a collector
+        sees the ones assigned to them. Newest first.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Paginated pickups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/pickups/available:
+    get:
+      tags: [Pickups]
+      summary: Open pickups waiting for a collector
+      description: >
+        Collectors only. Returns unassigned pickups still in `REQUESTED`. A citizen calling
+        this gets 403.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Open pickups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/pickups/{id}:
+    get:
+      tags: [Pickups]
+      summary: One pickup
+      description: >
+        Visible to the citizen who requested it, the collector assigned to it, any collector
+        while it is still open, and admins. Everyone else gets 404 rather than 403, so the
+        existence of a pickup is not leaked.
+      parameters:
+        - $ref: '#/components/parameters/PickupId'
+      responses:
+        '200':
+          description: The pickup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pickup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Not found, or not visible to this caller
+
+  /api/v1/pickups/{id}/accept:
+    post:
+      tags: [Pickups]
+      summary: Accept a pickup (collector)
+      description: >
+        First come, first served, enforced by a single atomic conditional update — if several
+        collectors accept at the same instant exactly one gets 200 and the rest get 409.
+
+
+        The pickup leaves the open feed, the citizen is emailed, and from this moment the
+        citizen can no longer cancel. A collector cannot accept their own request.
+      parameters:
+        - $ref: '#/components/parameters/PickupId'
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pickup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not a collector, or attempting to accept your own request
+        '404':
+          description: Pickup not found
+        '409':
+          description: Already accepted by another collector, or cancelled
+
+  /api/v1/pickups/{id}/complete:
+    post:
+      tags: [Pickups]
+      summary: Complete a pickup (assigned collector)
+      description: >
+        Records what was actually weighed and paid. The estimate stays on the record next to
+        it, so the gap between estimate and reality is auditable.
+      parameters:
+        - $ref: '#/components/parameters/PickupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompletePickupRequest'
+      responses:
+        '200':
+          description: Completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pickup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: This pickup is assigned to a different collector
+        '409':
+          description: The pickup was never accepted
+
+  /api/v1/pickups/{id}/release:
+    post:
+      tags: [Pickups]
+      summary: Release an accepted pickup back to the feed (collector)
+      description: >
+        For when a collector cannot make it after all. The pickup returns to `REQUESTED` and
+        becomes available to everyone again, rather than being cancelled on the citizen.
+      parameters:
+        - $ref: '#/components/parameters/PickupId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelPickupRequest'
+      responses:
+        '200':
+          description: Released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pickup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: This pickup is assigned to a different collector
+        '409':
+          description: Only an accepted pickup can be released (state is checked first)
+
+  /api/v1/pickups/{id}/cancel:
+    post:
+      tags: [Pickups]
+      summary: Cancel a pickup (citizen)
+      description: >
+        Only possible while the pickup is still `REQUESTED`. Once a collector has accepted it,
+        this returns 409 — the collector may already be on the way.
+      parameters:
+        - $ref: '#/components/parameters/PickupId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelPickupRequest'
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pickup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Not your pickup
+        '409':
+          description: Already accepted, cancelled or completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: A collector has already accepted this pickup and it can no longer be cancelled.
+
   /health:
     get:
       tags: [Health]
@@ -251,7 +584,26 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+  parameters:
+
+    PickupId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
   responses:
+
+    Forbidden:
+      description: The caller's role does not allow this action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: You do not have permission to perform this action
 
     Authenticated:
       description: Authenticated
@@ -396,6 +748,382 @@ components:
       properties:
         error:
           type: string
+
+    CreatePickupRequest:
+      type: object
+      required: [detectionId, address, contactPhone]
+      properties:
+        detectionId:
+          type: string
+          format: uuid
+          description: An eligible scan belonging to the caller.
+        address:
+          type: string
+          maxLength: 300
+          example: 12 Park Street, Kolkata 700016
+        landmark:
+          type: string
+          maxLength: 120
+          example: Near metro gate 3
+        contactPhone:
+          type: string
+          example: "+919876543210"
+        notes:
+          type: string
+          maxLength: 300
+          example: Ring the bell twice
+        latitude:
+          type: number
+          example: 22.5535
+        longitude:
+          type: number
+          example: 88.3520
+        preferredTime:
+          type: string
+          format: date-time
+
+    CompletePickupRequest:
+      type: object
+      required: [finalWeightKg, finalAmount]
+      properties:
+        finalWeightKg:
+          type: number
+          minimum: 0
+          example: 0.52
+        finalAmount:
+          type: number
+          minimum: 0
+          example: 13.0
+        collectorNotes:
+          type: string
+          maxLength: 300
+
+    CancelPickupRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 200
+          example: Will drop it off myself
+
+    Pickup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        detectionId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [REQUESTED, ACCEPTED, COMPLETED, CANCELLED]
+        cancellable:
+          type: boolean
+          description: >
+            True only while the status is REQUESTED. Drive the cancel button from this rather
+            than comparing status strings on the client.
+        location:
+          type: object
+          properties:
+            address: { type: string }
+            landmark: { type: string, nullable: true }
+            latitude: { type: number, nullable: true }
+            longitude: { type: number, nullable: true }
+        contact:
+          type: object
+          properties:
+            phone: { type: string }
+            notes: { type: string, nullable: true }
+        waste:
+          type: object
+          description: Copied from the scan when the pickup was requested.
+          properties:
+            totalObjects: { type: integer, example: 13 }
+            materials: { type: string, example: PET Bottle x13 }
+        money:
+          type: object
+          properties:
+            currency: { type: string, example: INR }
+            estimatedOffer: { type: number, example: 9.75 }
+            finalAmount: { type: number, nullable: true, example: 13.0 }
+            finalWeightKg: { type: number, nullable: true, example: 0.52 }
+        collector:
+          allOf:
+            - $ref: '#/components/schemas/Party'
+          nullable: true
+        citizen:
+          $ref: '#/components/schemas/Party'
+        cancelReason:
+          type: string
+          nullable: true
+        cancelledBy:
+          type: string
+          nullable: true
+          enum: [USER, COLLECTOR, null]
+        collectorNotes:
+          type: string
+          nullable: true
+        preferredTime:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Party:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        email: { type: string, format: email }
+
+    PickupList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pickup'
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        hasMore: { type: boolean }
+
+    DetectionMaterial:
+      type: object
+      properties:
+        material:
+          type: string
+          example: PET Bottle
+        category:
+          type: string
+          example: PLASTIC
+        stream:
+          type: string
+          enum: [DRY, WET, HAZARDOUS]
+        bin:
+          type: string
+          enum: [BLUE, GREEN, RED, GREY]
+        recyclable:
+          type: boolean
+        count:
+          type: integer
+          example: 13
+        pricePerKg:
+          type: number
+          example: 25
+        estimatedWeightKg:
+          type: number
+          example: 0.39
+        estimatedValue:
+          type: number
+          example: 9.75
+        rewardPoints:
+          type: integer
+          example: 65
+        carbonSavedKg:
+          type: number
+          example: 1.95
+
+    Detection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eligible:
+          type: boolean
+          description: >
+            False means the photo cannot be submitted and the user should retake it. Check
+            this before anything else.
+          example: true
+        status:
+          type: string
+          enum: [OK, MANUAL_PRICING_REQUIRED, NO_WASTE_DETECTED, LOW_CONFIDENCE]
+        message:
+          type: string
+        actionRequired:
+          type: string
+          nullable: true
+          enum: [RECLICK_IMAGE, COLLECTOR_SETS_PRICE, null]
+        imageUrl:
+          type: string
+          nullable: true
+          description: Cloudinary URL, null when upload is not configured.
+        totalObjects:
+          type: integer
+          example: 13
+        totalRewardPoints:
+          type: integer
+          example: 65
+        pointsAwarded:
+          type: boolean
+          description: Whether these points were actually credited to the user.
+        userPointsBalance:
+          type: integer
+          description: The user's balance after this scan.
+          example: 65
+        offer:
+          type: object
+          properties:
+            currency:
+              type: string
+              example: INR
+            minimumOffer:
+              type: number
+              example: 8.29
+            estimatedOffer:
+              type: number
+              example: 9.75
+            maximumOffer:
+              type: number
+              example: 11.21
+            status:
+              type: string
+              enum: [ESTIMATED, PENDING_COLLECTOR_CONFIRMATION, NO_RESALE_VALUE, UNAVAILABLE]
+            finalPriceSetBy:
+              type: string
+              enum: [SYSTEM, COLLECTOR]
+        impact:
+          type: object
+          properties:
+            estimatedWeightKg:
+              type: number
+            carbonSavedKg:
+              type: number
+            landfillReducedKg:
+              type: number
+            recyclablePercent:
+              type: integer
+        recommendation:
+          type: object
+          properties:
+            primaryBin:
+              type: string
+              nullable: true
+            secondaryBin:
+              type: string
+              nullable: true
+            pickupRecommended:
+              type: boolean
+        quality:
+          type: object
+          properties:
+            detectionQuality:
+              type: string
+              enum: [HIGH, MEDIUM, LOW, NONE]
+            averageConfidence:
+              type: number
+              example: 0.58
+        aiSummary:
+          type: string
+        processingTimeMs:
+          type: integer
+        materials:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectionMaterial'
+        createdAt:
+          type: string
+          format: date-time
+
+    DetectionHistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+        eligible:
+          type: boolean
+        totalObjects:
+          type: integer
+        totalRewardPoints:
+          type: integer
+        pointsAwarded:
+          type: boolean
+        currency:
+          type: string
+        estimatedOffer:
+          type: number
+        minimumOffer:
+          type: number
+        maximumOffer:
+          type: number
+        offerStatus:
+          type: string
+        estimatedWeightKg:
+          type: number
+        carbonSavedKg:
+          type: number
+        primaryBin:
+          type: string
+          nullable: true
+        pickupRecommended:
+          type: boolean
+        detectionQuality:
+          type: string
+        materials:
+          type: array
+          description: Compact labels for a list row, e.g. "PET Bottle x13".
+          items:
+            type: string
+          example: ["PET Bottle x13"]
+        createdAt:
+          type: string
+          format: date-time
+
+    DetectionHistory:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectionHistoryItem'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasMore:
+          type: boolean
+        totals:
+          type: object
+          description: Lifetime totals across the user's whole history, not just this page.
+          properties:
+            scans:
+              type: integer
+            objects:
+              type: integer
+            rewardPoints:
+              type: integer
+            carbonSavedKg:
+              type: number
+            estimatedEarnings:
+              type: number
 
 security:
   - bearerAuth: []

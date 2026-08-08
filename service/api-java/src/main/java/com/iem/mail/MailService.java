@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -90,6 +91,40 @@ public class MailService {
                 """), when, address);
 
         send(to, "New sign-in to your " + senderName + " account", html);
+    }
+
+    @Async
+    public void sendPickupAvailableEmail(String to, String address, String materials,
+                                         String currency, BigDecimal estimatedOffer) {
+
+        String value = estimatedOffer == null ? "-" : currency + " " + estimatedOffer;
+        String items = (materials == null || materials.isBlank()) ? "Mixed waste" : materials;
+
+        String html = String.format(card("""
+                <h2 style="color:#0F172A;margin-bottom:16px;">New pickup available</h2>
+                <p style="color:#475569;margin-bottom:8px;"><strong>Waste:</strong> %s</p>
+                <p style="color:#475569;margin-bottom:8px;"><strong>Estimated value:</strong> %s</p>
+                <p style="color:#475569;margin-bottom:24px;"><strong>Address:</strong> %s</p>
+                <p style="font-size:13px;color:#94A3B8;">Open the app to accept it. Pickups are
+                first come, first served.</p>
+                """), items, value, address);
+
+        send(to, "New pickup available - " + senderName, html);
+    }
+
+    @Async
+    public void sendPickupAcceptedEmail(String to, String collectorName, String address) {
+
+        String html = String.format(card("""
+                <h2 style="color:#0F172A;margin-bottom:16px;">Your pickup was accepted</h2>
+                <p style="color:#475569;margin-bottom:8px;"><strong>%s</strong> has accepted your
+                pickup request and will collect from:</p>
+                <p style="color:#475569;margin-bottom:24px;">%s</p>
+                <p style="font-size:13px;color:#94A3B8;">This pickup can no longer be cancelled.
+                Contact the collector through the app if your plans change.</p>
+                """), collectorName, address);
+
+        send(to, "Your pickup was accepted - " + senderName, html);
     }
 
     private String card(String body) {

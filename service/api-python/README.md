@@ -257,7 +257,11 @@ points back to that row rather than restating it. Payload for a 13-object respon
 
 ### objects[]
 
-Boxes are `xMin/yMin/xMax/yMax`, the convention most CV libraries use. Confidence is rounded
+Boxes are `xMin/yMin/xMax/yMax`, the convention most CV libraries use, and are expressed in
+**the original image's coordinate space** — the same `image.width` / `image.height` reported
+above. Inference runs on a copy downscaled to `YOLO_IMAGE_SIZE`, but the coordinates are
+mapped back, so a frontend can draw them straight onto the photo the user took without
+rescaling. Confidence is rounded
 to 2 decimals. Every detection carries a stable `id` (`obj-001`, ordered by confidence) so a
 frontend can highlight one box without index maths.
 

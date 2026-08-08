@@ -35,13 +35,13 @@ async def detect(image: UploadFile = File(...)):
     except ImageError as e:
         raise HTTPException(status_code=e.status, detail=e.message)
 
-    resized, _ = image_utils.resize(original)
+    resized, scale = image_utils.resize(original)
 
     upload = asyncio.create_task(
         asyncio.to_thread(cloudinary_service.upload, image_utils.to_jpeg_bytes(resized))
     )
 
-    objects, ignored, inference_ms = await asyncio.to_thread(yolo_service.detect, resized)
+    objects, ignored, inference_ms = await asyncio.to_thread(yolo_service.detect, resized, scale)
 
     assessment = assessment_service.assess(objects, ignored)
 

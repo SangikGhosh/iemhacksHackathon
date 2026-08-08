@@ -84,7 +84,7 @@ def debug_info():
     }
 
 
-def detect(image):
+def detect(image, scale=1.0):
     model = load_model()
 
     started = time.perf_counter()
@@ -121,7 +121,7 @@ def detect(image):
             ignored.append(raw_label)
             continue
 
-        x1, y1, x2, y2 = (float(v) for v in box.xyxy[0].tolist())
+        x1, y1, x2, y2 = (float(v) / scale for v in box.xyxy[0].tolist())
         accepted.append((confidence, raw_label, x1, y1, x2, y2))
 
     accepted.sort(key=lambda d: d[0], reverse=True)

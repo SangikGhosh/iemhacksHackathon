@@ -24,10 +24,16 @@ public class OtpService {
     }
 
     public String generate(String email) {
+        purgeExpired();
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
         store.put(key(email), new Entry(code, Instant.now().plus(TTL)));
         log.info("OTP generated for {}: {}", email, code);
         return code;
+    }
+
+    private void purgeExpired() {
+        Instant now = Instant.now();
+        store.values().removeIf(entry -> entry.expiresAt().isBefore(now));
     }
 
     public void verify(String email, String code) {
