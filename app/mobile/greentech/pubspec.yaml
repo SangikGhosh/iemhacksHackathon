@@ -70,6 +70,12 @@ flutter:
     - Assets/image/logo.png
     - Assets/image/splash_bg.png
     - Assets/image/AuthScreenImage.jpg
+    - Assets/image/forest_bg.jpeg
+    - Assets/image/onboarding_bg.jpeg
+    - Assets/image/reward_icon.png
+    - Assets/image/segregation_icon.png
+    - Assets/image/smart_truck_icon.png
+    - Assets/image/tree_sky_bg.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
