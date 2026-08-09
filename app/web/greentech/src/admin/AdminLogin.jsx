@@ -42,7 +42,7 @@ export default function AdminLogin() {
             <ShieldCheck className="size-5" />
           </span>
           <div>
-            <p className="font-semibold">GreenTech Console</p>
+            <p className="font-semibold">GreenRoute Console</p>
             <p className="text-xs text-neutral-500">Municipal &amp; platform administration</p>
           </div>
         </div>
@@ -55,7 +55,7 @@ export default function AdminLogin() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="hmc.admin@greentech.local"
+              placeholder="hmc.admin@GreenRoute.local"
               className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500/60"
             />
           </div>

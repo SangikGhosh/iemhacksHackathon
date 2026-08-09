@@ -1,0 +1,126 @@
+name: api-python
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "service/api-python/**"
+      - ".github/workflows/api-python.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "service/api-python/**"
+      - ".github/workflows/api-python.yml"
+
+env:
+  IMAGE_NAME: greentech-api-python
+
+jobs:
+  # The deployment target is an aarch64 Oracle VM, so the image must be arm64. Building that
+  # on an amd64 runner means QEMU emulation, and emulated torch/ultralytics takes roughly 40
+  # minutes and routinely hits the job timeout. GitHub's native arm64 runners are free for
+  # public repositories, so the build runs on real arm hardware instead — no emulation, and
+  # the smoke test below exercises the exact architecture that will run in production.
+  build-and-verify:
+    runs-on: ubuntu-24.04-arm
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # A leaked key cannot be un-leaked by deleting the commit, so the only useful moment to
+      # catch one is before it is ever built or published. These are the credentials this repo
+      # actually holds: OpenRouter, Resend, Mapbox, plus the generic key formats.
+      - name: Block committed credentials
+        run: |
+          set +e
+          MATCHES=$(git grep -lE 'sk-or-v1-[A-Za-z0-9]{32,}|re_[A-Za-z0-9]{20,}|sk\.eyJ[A-Za-z0-9_-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|"type"[[:space:]]*:[[:space:]]*"service_account"' -- . ':!*.md' ':!.github/workflows/*')
+          set -e
+          if [ -n "$MATCHES" ]; then
+            echo "::error::Committed credential detected in: $MATCHES"
+            echo "Remove the file, add it to .gitignore, and ROTATE the key —"
+            echo "anything that reached the repository must be treated as compromised."
+            exit 1
+          fi
+          echo "No committed credentials found."
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # A syntax error would otherwise only surface when the container starts, which is after
+      # the image has been published. This costs seconds and catches it here.
+      - name: Byte-compile every module
+        working-directory: service/api-python
+        run: python -m compileall -q app
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Loaded locally first so the image can actually be started and probed. A green build
+      # only proves it compiled; the smoke test proves it boots and serves traffic.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./service/api-python
+          file: ./service/api-python/Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:ci
+          cache-from: type=gha,scope=api-python-arm64
+          cache-to: type=gha,mode=max,scope=api-python-arm64
+          provenance: false
+
+      # Proves the container serves /health without reaching the network for weights. If the
+      # baked-in yolov8m.pt were ever dropped, ultralytics would try to download it at startup
+      # and this is where that regression surfaces.
+      - name: Smoke test the container
+        run: |
+          docker run -d --name api-python-ci -p 8000:8000 "${IMAGE_NAME}:ci"
+
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health > /tmp/health.json 2>/dev/null; then
+              echo "Healthy after $((i * 10))s"
+              cat /tmp/health.json
+              grep -q '"weights"' /tmp/health.json || { echo "::error::weights missing"; exit 1; }
+              docker rm -f api-python-ci > /dev/null
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "::error::Service did not become healthy within 10 minutes"
+          docker logs api-python-ci
+          docker rm -f api-python-ci > /dev/null
+          exit 1
+
+      - name: Log in to Docker Hub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./service/api-python
+          file: ./service/api-python/Dockerfile
+          push: true
+          platforms: linux/arm64
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/greentech-api-python:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/greentech-api-python:${{ github.sha }}
+          cache-from: type=gha,scope=api-python-arm64
+          cache-to: type=gha,mode=max,scope=api-python-arm64
+          provenance: false

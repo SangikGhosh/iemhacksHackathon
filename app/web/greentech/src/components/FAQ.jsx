@@ -8,7 +8,7 @@ export function FAQ() {
       <div className="mx-auto max-w-3xl">
         <SectionHeading
           eyebrow="Questions"
-          title="The questions a judge would ask"
+          title="Your Questions' Answered"
           subtitle="Including the uncomfortable ones. Where the honest answer is a limitation, that is the answer given."
         />
 

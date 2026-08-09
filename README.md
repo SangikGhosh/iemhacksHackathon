@@ -1,4 +1,4 @@
-# GreenTech — Community Waste Management & Circular Economy Platform
+# GreenRoute — Community Waste Management & Circular Economy Platform
 
 IEMHACKS 4.0 · Track 04 · `IEMH4-GT-01`
 
@@ -17,8 +17,8 @@ service/
   api-java/     Spring Boot 3.5 · auth, scan history, pickups, routing   :8080
   api-python/   FastAPI + YOLO · waste detection, pricing, bins          :8000
 app/
-  mobile/greentech/   Flutter app (Android / iOS)
-  web/greentech/      React + Vite + Tailwind — landing page + admin consoles
+  mobile/GreenRoute/   Flutter app (Android / iOS)
+  web/GreenRoute/      React + Vite + Tailwind — landing page + admin consoles
 tasks/
   collector-task/         what each role can do, which API backs it,
   recycler-task/          and what is still open
@@ -109,11 +109,11 @@ cd service/api-java
 cp .env.example .env        # JWT_SECRET, GOOGLE_CLIENT_ID, RESEND_API_KEY, MAPBOX_TOKEN, DB
 # set MAIL_ENABLED=false to work without burning the Resend quota -
 # OTPs are then printed in this terminal instead of emailed
-createdb greentech
+createdb GreenRoute
 mvn spring-boot:run
 
 # 3 — web (landing + admin consoles)
-cd app/web/greentech
+cd app/web/GreenRoute
 cp .env.example .env        # VITE_API_BASE_URL, defaults to :8080
 npm install && npm run dev  # then open /admin/login
 ```
@@ -140,7 +140,7 @@ rank when you send a token even if you are off the visible page.
 
 ### Admin consoles
 
-Two React dashboards in `app/web/greentech`, both wired to the live API:
+Two React dashboards in `app/web/GreenRoute`, both wired to the live API:
 
 | Route | Role | Can do |
 | --- | --- | --- |
