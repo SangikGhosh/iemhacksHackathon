@@ -3,6 +3,7 @@ package com.iem.market;
 import com.iem.auth.UserRepository;
 import com.iem.detection.DetectionRepository;
 import com.iem.enums.ListingStatus;
+import com.iem.enums.PickupStatus;
 import com.iem.enums.Role;
 import com.iem.enums.TransactionType;
 import com.iem.exception.ApiException;
@@ -11,6 +12,7 @@ import com.iem.model.Detection;
 import com.iem.model.Listing;
 import com.iem.model.User;
 import com.iem.model.WalletTransaction;
+import com.iem.pickup.PickupRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,17 +41,20 @@ public class MarketplaceService {
     private final WalletTransactionRepository transactionRepository;
     private final DetectionRepository detectionRepository;
     private final UserRepository userRepository;
+    private final PickupRepository pickupRepository;
     private final String fallbackImage;
 
     public MarketplaceService(ListingRepository listingRepository,
                               WalletTransactionRepository transactionRepository,
                               DetectionRepository detectionRepository,
                               UserRepository userRepository,
+                              PickupRepository pickupRepository,
                               @Value("${market.fallback-image:}") String fallbackImage) {
         this.listingRepository = listingRepository;
         this.transactionRepository = transactionRepository;
         this.detectionRepository = detectionRepository;
         this.userRepository = userRepository;
+        this.pickupRepository = pickupRepository;
         this.fallbackImage = fallbackImage;
     }
 
@@ -76,6 +81,12 @@ public class MarketplaceService {
             }
             if (listingRepository.existsByDetectionIdAndStatus(detection.getId(), ListingStatus.OPEN)) {
                 throw new ApiException("This scan is already listed", 409);
+            }
+            if (pickupRepository.existsByDetectionIdAndStatusNot(
+                    detection.getId(), PickupStatus.CANCELLED)) {
+                throw new ApiException(
+                        "This scan is already going to a collector. Cancel the pickup first if "
+                                + "you would rather sell it.", 409);
             }
 
             listing.setDetectionId(detection.getId());
@@ -182,8 +193,35 @@ public class MarketplaceService {
 
     @Transactional(readOnly = true)
     public ListingListResponse browse(UUID viewerId, int page, int size) {
-        PageRequest pageable = pageable(page, size);
-        return toList(listingRepository.findByStatus(ListingStatus.OPEN, pageable), viewerId, pageable);
+        return browse(viewerId, page, size, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public ListingListResponse browse(UUID viewerId, int page, int size,
+                                      String material, String sort) {
+
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
+                sortOf(sort));
+
+        String term = material == null || material.isBlank()
+                ? null
+                : "%" + material.trim().toLowerCase() + "%";
+
+        return toList(listingRepository.browseOpen(term, pageable), viewerId, pageable);
+    }
+
+    private static Sort sortOf(String sort) {
+        String key = sort == null || sort.isBlank() ? "newest" : sort.trim().toLowerCase();
+        return switch (key) {
+            case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
+            case "price_asc" -> Sort.by(Sort.Direction.ASC, "price");
+            case "price_desc" -> Sort.by(Sort.Direction.DESC, "price");
+            case "weight_desc" -> Sort.by(Sort.Direction.DESC, "weightKg");
+            default -> throw new ApiException(
+                    "Unknown sort: " + sort
+                            + ". Use newest, oldest, price_asc, price_desc or weight_desc", 400);
+        };
     }
 
     @Transactional(readOnly = true)
