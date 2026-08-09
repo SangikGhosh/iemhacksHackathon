@@ -16,9 +16,6 @@ on:
       - "service/api-java/**"
       - ".github/workflows/api-java.yml"
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: greentech-api-java
 
 jobs:
   test-and-build:
@@ -91,19 +88,12 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to Docker Hub
         if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # ghcr.io requires a lowercase owner; the GitHub org name is mixed case.
-      - name: Resolve image reference
-        if: github.ref == 'refs/heads/main'
-        working-directory: .
-        run: echo "IMAGE=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}" >> "$GITHUB_ENV"
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # The Dockerfile compiles the JAR itself rather than copying the one built above, so the
       # published image never depends on the runner's local state.
@@ -116,8 +106,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/greentech-api-java:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/greentech-api-java:${{ github.sha }}
           cache-from: type=gha,scope=api-java
           cache-to: type=gha,mode=max,scope=api-java
           provenance: false

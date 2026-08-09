@@ -28,17 +28,22 @@ jobs:
         env:
           ENV_JAVA: ${{ secrets.ENV_JAVA }}
           ENV_PYTHON: ${{ secrets.ENV_PYTHON }}
-          OWNER: ${{ github.repository_owner }}
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USERNAME }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: ENV_JAVA,ENV_PYTHON,OWNER
+          envs: ENV_JAVA,ENV_PYTHON,DOCKER_USER
           script_stop: true
 
           script: |
             set -e
-            mkdir -p /opt/greentech
+            # /opt is root-owned, so the directory is created once with sudo and handed to the
+            # deploy user. Everything after this runs unprivileged.
+            if [ ! -d /opt/greentech ]; then
+              sudo mkdir -p /opt/greentech
+              sudo chown "$(id -u):$(id -g)" /opt/greentech
+            fi
             cd /opt/greentech
 
             # Both env files are stored as ONE secret each rather than one secret per key.
@@ -60,8 +65,6 @@ jobs:
               fi
             done
 
-            OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
-
             # Written here so the server topology always matches the repository. Quoted
             # delimiter: nothing in this file needs shell expansion.
             cat > docker-compose.yml <<EOF
@@ -69,7 +72,7 @@ jobs:
 
             services:
               api-python:
-                image: ghcr.io/${OWNER_LC}/greentech-api-python:latest
+                image: ${DOCKER_USER}/greentech-api-python:latest
                 container_name: greentech-api-python
                 restart: unless-stopped
                 env_file:
@@ -82,7 +85,7 @@ jobs:
                   - greentech
 
               api-java:
-                image: ghcr.io/${OWNER_LC}/greentech-api-java:latest
+                image: ${DOCKER_USER}/greentech-api-java:latest
                 container_name: greentech-api-java
                 restart: unless-stopped
                 depends_on:

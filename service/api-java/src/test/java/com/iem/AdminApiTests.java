@@ -37,14 +37,36 @@ class AdminApiTests {
 
     @BeforeEach
     void setUp() {
-        User superAdmin = userRepository.findByEmail("superadmin@greentech.local").orElseThrow(
-                () -> new IllegalStateException("super admin was not seeded"));
-        User municipalAdmin = userRepository.findByEmail("hmc.admin@greentech.local").orElseThrow(
-                () -> new IllegalStateException("municipal admin was not seeded"));
+        User superAdmin = adminAccount("superadmin@greentech.local", Role.SUPER_ADMIN);
+        User municipalAdmin = adminAccount("hmc.admin@greentech.local", Role.MUNICIPAL_ADMIN);
 
         superToken = authService.buildResponse(superAdmin).accessToken();
         municipalToken = authService.buildResponse(municipalAdmin).accessToken();
         citizenToken = authService.buildResponse(register("admin-citizen")).accessToken();
+    }
+
+    /**
+     * The seeder creates these on boot, but several other test classes call
+     * userRepository.deleteAll() in their own setUp and every class shares one Spring context
+     * and one H2 database. Whether the seeded rows still exist therefore depends on class
+     * execution order, which surefire does not guarantee and which differs between a laptop
+     * and CI. Recreating them here makes this class independent of that order.
+     */
+    private User adminAccount(String email, Role role) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            User user = new User();
+            user.setEmail(email);
+            user.setFullName(role == Role.SUPER_ADMIN ? "Platform Super Admin" : "Municipal Admin");
+            user.setPassword("{noop}not-used-in-tests");
+            user.setRole(role);
+            user.setEmailVerified(true);
+            user.setActive(true);
+            if (role == Role.MUNICIPAL_ADMIN) {
+                municipalityRepository.findByCode("HMC")
+                        .ifPresent(m -> user.setMunicipalityId(m.getId()));
+            }
+            return userRepository.save(user);
+        });
     }
 
     private User register(String prefix) {
