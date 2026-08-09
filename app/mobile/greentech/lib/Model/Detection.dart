@@ -222,6 +222,24 @@ class Detection {
 
   bool get needsCollectorPrice => actionRequired == 'COLLECTOR_SETS_PRICE';
 
+  DetectionHistoryItem toHistoryItem() => DetectionHistoryItem(
+    id: id,
+    imageUrl: imageUrl,
+    status: status,
+    eligible: eligible,
+    totalObjects: totalObjects,
+    totalRewardPoints: totalRewardPoints,
+    pointsAwarded: pointsAwarded,
+    currency: offer.currency,
+    estimatedOffer: offer.estimatedOffer,
+    estimatedWeightKg: impact.estimatedWeightKg,
+    carbonSavedKg: impact.carbonSavedKg,
+    primaryBin: recommendation.primaryBin,
+    pickupRecommended: recommendation.pickupRecommended,
+    materials: materials.map((item) => item.material).toList(),
+    createdAt: DateTime.now(),
+  );
+
   factory Detection.fromJson(Map<String, dynamic> json) => Detection(
     id: json['id']?.toString() ?? '',
     eligible: json['eligible'] == true,

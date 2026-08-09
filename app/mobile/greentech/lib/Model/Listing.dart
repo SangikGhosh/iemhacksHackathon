@@ -16,6 +16,20 @@ enum ListingStatus {
   );
 }
 
+enum ListingSort {
+  newest('newest', 'Newest'),
+  oldest('oldest', 'Oldest'),
+  priceAsc('price_asc', 'Cheapest lot'),
+  priceDesc('price_desc', 'Dearest lot'),
+  weightDesc('weight_desc', 'Heaviest');
+
+  const ListingSort(this.wire, this.label);
+
+  final String wire;
+
+  final String label;
+}
+
 class ListingParty {
   const ListingParty({
     required this.id,

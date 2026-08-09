@@ -2,7 +2,7 @@ class ApiConfig {
   const ApiConfig._();
 
   static const String baseUrl =
-      'https://f5a5-2409-40e0-1b8-4e8c-242e-1fae-e565-9c08.ngrok-free.app';
+      'https://ece6-2409-40e0-1b8-4e8c-ad8d-9b43-129-9dfe.ngrok-free.app';
 
   static const String googleServerClientId =
       '819603256526-to4me888iii7rh7tpipjac3jufqtam89.apps.googleusercontent.com';

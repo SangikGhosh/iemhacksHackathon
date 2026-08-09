@@ -11,6 +11,9 @@ import 'package:greentech/Screen/Marketplace/ListingsScreen.dart';
 import 'package:greentech/Screen/NotFound/NotFoundScreen.dart';
 import 'package:greentech/Screen/Notifications/NotificationsScreen.dart';
 import 'package:greentech/Screen/Pickup/PickupDetailScreen.dart';
+import 'package:greentech/Screen/Home/ImageScreen.dart';
+import 'package:greentech/Screen/Home/PickupScreen.dart';
+import 'package:greentech/Screen/Recycler/NearbyYardsScreen.dart';
 import 'package:greentech/Screen/Rewards/LeaderboardScreen.dart';
 import 'package:greentech/Screen/Rewards/RewardsScreen.dart';
 import 'package:greentech/Screen/Wallet/WalletScreen.dart';
@@ -22,19 +25,13 @@ import 'package:greentech/Widget/BottomNavBar.dart';
 
 const _authRoutes = {'/auth', '/login', '/signup'};
 
-const _protectedRoutes = {
-  '/home',
-  '/image',
-  '/pickup',
-  '/settings',
-  '/profile',
-  '/leaderboard',
-  '/rewards',
-  '/wallet',
-  '/chat',
-  '/listings',
-  '/notifications',
-};
+const _publicRoutes = {'/', '/auth', '/login', '/signup'};
+
+const _rewardRoutes = {'/rewards', '/leaderboard'};
+
+const _pickupRoutes = {'/pickup', '/my-pickups'};
+
+const _sellRoutes = {'/listings'};
 
 class _SessionRefresh extends ChangeNotifier {
   _SessionRefresh(Ref ref) {
@@ -52,15 +49,30 @@ final routerProvider = Provider<GoRouter>((ref) {
 
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
-      final location = state.matchedLocation;
+      if (session.isLoading) return null;
 
-      if (location == '/' || session.isLoading) return null;
+      final location = state.matchedLocation;
+      if (location == '/') return null;
 
       final signedIn = session.value != null;
 
       if (signedIn && _authRoutes.contains(location)) return '/home';
 
-      if (!signedIn && _protectedRoutes.contains(location)) return '/auth';
+      if (!signedIn && !_publicRoutes.contains(location)) return '/auth';
+
+      final role = session.value?.role;
+
+      if (role != null) {
+        if (!role.earnsRewards && _rewardRoutes.contains(location)) {
+          return '/home';
+        }
+        if (!role.canRequestPickup && _pickupRoutes.contains(location)) {
+          return '/home';
+        }
+        if (!role.canSellScrap && _sellRoutes.contains(location)) {
+          return '/home';
+        }
+      }
 
       return null;
     },
@@ -113,6 +125,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/yards',
+        name: 'yards',
+        builder: (context, state) => const NearbyYardsScreen(),
+      ),
+      GoRoute(
+        path: '/scan',
+        name: 'scan',
+        builder: (context, state) => const ImageScreen(standalone: true),
+      ),
+      GoRoute(
+        path: '/my-pickups',
+        name: 'myPickups',
+        builder: (context, state) => const PickupScreen(standalone: true),
       ),
       GoRoute(
         path: '/leaderboard',

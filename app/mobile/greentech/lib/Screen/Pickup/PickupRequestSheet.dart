@@ -60,6 +60,11 @@ class _PickupRequestSheetState extends ConsumerState<PickupRequestSheet> {
     super.initState();
     _scan = widget.initialScan;
     _loadPoints();
+
+    if (widget.initialScan == null &&
+        ref.read(detectionHistoryProvider).hasValue) {
+      ref.read(detectionHistoryProvider.notifier).refresh();
+    }
   }
 
   @override
@@ -72,10 +77,10 @@ class _PickupRequestSheetState extends ConsumerState<PickupRequestSheet> {
   }
 
   List<DetectionHistoryItem> get _eligibleScans {
-    final history = ref.read(detectionHistoryProvider).value;
+    final history = ref.watch(detectionHistoryProvider).value;
     if (history == null) return const [];
 
-    final usedIds = (ref.read(pickupsProvider).value ?? const <Pickup>[])
+    final usedIds = (ref.watch(pickupsProvider).value ?? const <Pickup>[])
         .where((pickup) => pickup.status != PickupStatus.cancelled)
         .map((pickup) => pickup.detectionId)
         .toSet();
@@ -197,13 +202,24 @@ class _PickupRequestSheetState extends ConsumerState<PickupRequestSheet> {
         _error = error.message;
       });
       HapticFeedback.vibrate();
+
+      if (error.statusCode == 409 || error.statusCode == 404) {
+        await Future.wait([
+          ref.read(detectionHistoryProvider.notifier).refresh(),
+          ref.read(myListingsProvider.notifier).refresh(),
+        ]);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final inset = MediaQuery.of(context).viewInsets.bottom;
-    final scans = _eligibleScans;
+    final pinned = widget.initialScan;
+    final history = ref.watch(detectionHistoryProvider);
+    final scans = pinned == null ? _eligibleScans : [pinned];
+    final loadingScans =
+        pinned == null && history.isLoading && !history.hasValue;
 
     return Padding(
       padding: EdgeInsets.only(bottom: inset),
@@ -243,19 +259,25 @@ class _PickupRequestSheetState extends ConsumerState<PickupRequestSheet> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Pick a scan, then choose how to hand the waste over.',
-                      style: TextStyle(
+                    Text(
+                      pinned == null
+                          ? 'Pick a scan, then choose how to hand the waste over.'
+                          : 'Choose how to hand this waste over.',
+                      style: const TextStyle(
                         fontSize: 14.5,
                         height: 1.45,
                         color: uiInkSecondary,
                       ),
                     ),
                     const SizedBox(height: 26),
-                    const UiSectionLabel('Which scan?'),
+                    UiSectionLabel(
+                      pinned == null ? 'Which scan?' : 'Your scan',
+                    ),
                     _ScanPicker(
                       scans: scans,
                       selected: _scan,
+                      locked: pinned != null,
+                      loading: loadingScans,
                       showError: _showErrors && _scan == null,
                       onSelect: (item) => setState(() {
                         _scan = item;
@@ -496,17 +518,37 @@ class _ScanPicker extends StatelessWidget {
   const _ScanPicker({
     required this.scans,
     required this.selected,
+    required this.locked,
+    required this.loading,
     required this.showError,
     required this.onSelect,
   });
 
   final List<DetectionHistoryItem> scans;
   final DetectionHistoryItem? selected;
+  final bool locked;
+  final bool loading;
   final bool showError;
   final ValueChanged<DetectionHistoryItem> onSelect;
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return Container(
+        height: 88,
+        decoration: BoxDecoration(
+          color: uiFill,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        alignment: Alignment.center,
+        child: const SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2.4, color: uiInk),
+        ),
+      );
+    }
+
     if (scans.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(18),
@@ -544,13 +586,14 @@ class _ScanPicker extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: _SelectableRow(
-              selected: scan.id == selected?.id,
+              selected: locked || scan.id == selected?.id,
               title: scan.materialSummary,
-              subtitle:
-                  '${scan.totalObjects} items · ${kilograms(scan.estimatedWeightKg)} · '
-                  '${relativeTime(scan.createdAt)}',
+              subtitle: locked
+                  ? '${scan.totalObjects} items · ${kilograms(scan.estimatedWeightKg)} · just scanned'
+                  : '${scan.totalObjects} items · ${kilograms(scan.estimatedWeightKg)} · '
+                        '${relativeTime(scan.createdAt)}',
               trailing: rupees(scan.estimatedOffer),
-              onTap: () => onSelect(scan),
+              onTap: locked ? null : () => onSelect(scan),
             ),
           ),
         if (showError)
@@ -579,13 +622,14 @@ class _SelectableRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final String? trailing;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Pressable(
       onTap: onTap,
       scale: 0.99,
+      dimWhenDisabled: false,
       child: AnimatedContainer(
         duration: uiQuick,
         curve: uiEase,

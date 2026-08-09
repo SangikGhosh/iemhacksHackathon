@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'package:greentech/Model/AppUser.dart';
+import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Service/UserService.dart';
 import 'package:greentech/Utils/avatar_helper.dart';
@@ -74,7 +75,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     if (shouldSignOut != true) return;
 
-    await ref.read(sessionProvider.notifier).signOut();
+    await signOutAndReset(ref);
     router.go('/auth');
   }
 
@@ -147,11 +148,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   label: 'Role',
                                   value: (user?.role ?? Role.citizen).label,
                                 ),
-                                _buildDetailTile(
-                                  icon: HugeIcons.strokeRoundedStar,
-                                  label: 'Reward points',
-                                  value: '${user?.points ?? 0}',
-                                ),
+                                if ((user?.role ?? Role.citizen).earnsRewards)
+                                  _buildDetailTile(
+                                    icon: HugeIcons.strokeRoundedStar,
+                                    label: 'Reward points',
+                                    value: '${user?.points ?? 0}',
+                                  ),
                                 const SizedBox(height: 20),
                                 _buildSignOutButton(),
                               ],

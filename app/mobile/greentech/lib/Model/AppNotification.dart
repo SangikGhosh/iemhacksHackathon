@@ -7,7 +7,8 @@ enum NotificationKind {
   pickupCompleted('PICKUP_COMPLETED'),
   pickupCancelled('PICKUP_CANCELLED'),
   pickupRequested('PICKUP_REQUESTED'),
-  pickupReleased('PICKUP_RELEASED');
+  pickupReleased('PICKUP_RELEASED'),
+  jobAvailable('JOB_AVAILABLE');
 
   const NotificationKind(this.wire);
 
@@ -86,6 +87,23 @@ class AppNotification {
     } on FormatException {
       return const [];
     }
+  }
+
+  static AppNotification forNewJob({
+    required Pickup job,
+    required DateTime now,
+  }) {
+    return AppNotification(
+      id: 'job:${job.id}',
+      kind: NotificationKind.jobAvailable,
+      title: 'New pickup available',
+      body:
+          '${job.materials.isEmpty ? '${job.totalObjects} items' : job.materials}'
+          '${job.location.address.isEmpty ? '' : ' at ${job.location.address}'}',
+      pickupId: job.id,
+      createdAt: job.createdAt ?? now,
+      read: false,
+    );
   }
 
   static AppNotification? forTransition({

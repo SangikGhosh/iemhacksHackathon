@@ -39,6 +39,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     NotificationKind.pickupCancelled => uiDanger,
     NotificationKind.pickupReleased => uiAmber,
     NotificationKind.pickupRequested => uiInkSecondary,
+    NotificationKind.jobAvailable => uiGreen,
   };
 
   dynamic _icon(NotificationKind kind) => switch (kind) {
@@ -47,6 +48,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     NotificationKind.pickupCancelled => HugeIcons.strokeRoundedCancel01,
     NotificationKind.pickupReleased => HugeIcons.strokeRoundedRefresh,
     NotificationKind.pickupRequested => HugeIcons.strokeRoundedDeliveryBox01,
+    NotificationKind.jobAvailable => HugeIcons.strokeRoundedPackage,
   };
 
   @override

@@ -370,7 +370,16 @@ class _CreateListingSheetState extends ConsumerState<_CreateListingSheet> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _priceController.addListener(_onRateInputChanged);
+    _weightController.addListener(_onRateInputChanged);
+  }
+
+  @override
   void dispose() {
+    _priceController.removeListener(_onRateInputChanged);
+    _weightController.removeListener(_onRateInputChanged);
     _priceController.dispose();
     _materialController.dispose();
     _weightController.dispose();
@@ -379,7 +388,23 @@ class _CreateListingSheetState extends ConsumerState<_CreateListingSheet> {
     super.dispose();
   }
 
+  void _onRateInputChanged() {
+    if (mounted) setState(() {});
+  }
+
   double? get _price => double.tryParse(_priceController.text.trim());
+
+  double? get _listedWeightKg {
+    if (_manual) return double.tryParse(_weightController.text.trim());
+    return _scan?.estimatedWeightKg;
+  }
+
+  double? get _impliedRate {
+    final price = _price;
+    final weight = _listedWeightKg;
+    if (price == null || weight == null || weight <= 0) return null;
+    return price / weight;
+  }
 
   bool get _valid {
     final price = _price;
@@ -426,6 +451,13 @@ class _CreateListingSheetState extends ConsumerState<_CreateListingSheet> {
         _submitting = false;
         _error = error.message;
       });
+
+      if (error.statusCode == 409 || error.statusCode == 404) {
+        await Future.wait([
+          ref.read(detectionHistoryProvider.notifier).refresh(),
+          ref.read(pickupsProvider.notifier).refresh(),
+        ]);
+      }
     }
   }
 
@@ -651,6 +683,19 @@ class _CreateListingSheetState extends ConsumerState<_CreateListingSheet> {
                           : null,
                       onSubmitted: (_) => setState(() {}),
                     ),
+                    if (_impliedRate != null) ...[
+                      const SizedBox(height: 9),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Text(
+                          'That is ${rupees(_impliedRate!)}/kg — the rate recyclers compare on.',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: uiInkSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     UiTextField(
                       label: 'Description (optional)',

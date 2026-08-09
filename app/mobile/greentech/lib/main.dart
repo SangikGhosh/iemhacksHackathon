@@ -18,6 +18,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
+      title: 'Green Route',
       debugShowCheckedModeBanner: false,
       routerConfig: ref.watch(routerProvider),
 

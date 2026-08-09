@@ -220,6 +220,38 @@ class ApiService {
     return Pickup.fromJson(json);
   }
 
+  static Future<PickupPage> availablePickups({int page = 0, int size = 50}) async {
+    final json = await _get('/api/v1/pickups/available?page=$page&size=$size');
+    return PickupPage.fromJson(json);
+  }
+
+  static Future<Pickup> acceptPickup(String id) async {
+    final json = await _post('/api/v1/pickups/$id/accept', const {});
+    return Pickup.fromJson(json);
+  }
+
+  static Future<Pickup> completePickup(
+    String id, {
+    required double finalWeightKg,
+    required double finalAmount,
+    String? collectorNotes,
+  }) async {
+    final json = await _post('/api/v1/pickups/$id/complete', {
+      'finalWeightKg': finalWeightKg,
+      'finalAmount': finalAmount,
+      if (collectorNotes != null && collectorNotes.isNotEmpty)
+        'collectorNotes': collectorNotes,
+    });
+    return Pickup.fromJson(json);
+  }
+
+  static Future<Pickup> releasePickup(String id, {String? reason}) async {
+    final json = await _post('/api/v1/pickups/$id/release', {
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    });
+    return Pickup.fromJson(json);
+  }
+
   static Future<Wallet> wallet({int page = 0, int size = 30}) async {
     final json = await _get('/api/v1/wallet?page=$page&size=$size');
     return Wallet.fromJson(json);
@@ -235,8 +267,17 @@ class ApiService {
     return ListingPage.fromJson(json);
   }
 
-  static Future<ListingPage> openListings({int page = 0, int size = 20}) async {
-    final json = await _get('/api/v1/listings?page=$page&size=$size');
+  static Future<ListingPage> openListings({
+    int page = 0,
+    int size = 20,
+    String? material,
+    ListingSort sort = ListingSort.newest,
+  }) async {
+    final trimmed = material?.trim() ?? '';
+    final json = await _get(
+      '/api/v1/listings?page=$page&size=$size&sort=${sort.wire}'
+      '${trimmed.isEmpty ? '' : '&material=${Uri.encodeQueryComponent(trimmed)}'}',
+    );
     return ListingPage.fromJson(json);
   }
 
@@ -257,6 +298,16 @@ class ApiService {
         'description': description,
       if (location != null && location.isNotEmpty) 'location': location,
     });
+    return Listing.fromJson(json);
+  }
+
+  static Future<Listing> buyListing(String id) async {
+    final json = await _post('/api/v1/listings/$id/interested', const {});
+    return Listing.fromJson(json);
+  }
+
+  static Future<Listing> listing(String id) async {
+    final json = await _get('/api/v1/listings/$id');
     return Listing.fromJson(json);
   }
 

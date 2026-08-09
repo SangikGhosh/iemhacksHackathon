@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import 'package:greentech/Model/AppUser.dart';
 import 'package:greentech/Model/Pickup.dart';
 import 'package:greentech/Model/Wallet.dart';
 import 'package:greentech/Provider/CitizenProviders.dart';
+import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
 
@@ -30,7 +32,9 @@ class PaymentEntry {
 }
 
 class WalletScreen extends ConsumerStatefulWidget {
-  const WalletScreen({super.key});
+  const WalletScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<WalletScreen> createState() => _WalletScreenState();
@@ -92,7 +96,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
   Widget build(BuildContext context) {
     final async = ref.watch(walletProvider);
     final wallet = async.value ?? Wallet.empty;
-    final pickups = ref.watch(pickupsProvider).value ?? const <Pickup>[];
+    final role = ref.watch(sessionProvider).value?.role ?? Role.citizen;
+    final showPickups = role.canRequestPickup;
+    final pickups = showPickups
+        ? ref.watch(pickupsProvider).value ?? const <Pickup>[]
+        : const <Pickup>[];
 
     final fromPickups = _pickupPayments(pickups);
     final fromWallet = _walletPayments(wallet);
@@ -121,7 +129,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
       appBar: CitizenAppBar(
         title: 'Wallet',
         subtitle: 'Marketplace balance and pickup payouts',
-        onBack: _exit,
+        onBack: widget.embedded ? null : _exit,
       ),
       body: async.isLoading && !async.hasValue
           ? const Center(child: CircularProgressIndicator(color: uiInk))
@@ -144,7 +152,11 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 36),
                 children: [
-                  _BalanceCard(wallet: wallet, pickupTotal: pickupTotal),
+                  _BalanceCard(
+                    wallet: wallet,
+                    pickupTotal: pickupTotal,
+                    showPickups: showPickups,
+                  ),
                   const SizedBox(height: 14),
                   Row(
                     children: [
@@ -159,35 +171,50 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: MetricTile(
-                          icon: HugeIcons.strokeRoundedDeliveryBox01,
-                          value: rupees(pickupTotal),
-                          label: 'Pickup payouts',
+                          icon: HugeIcons.strokeRoundedArrowDown01,
+                          value: rupees(wallet.totalSpent),
+                          label: 'Purchases out',
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: MetricTile(
-                          icon: HugeIcons.strokeRoundedStar,
-                          value: '${wallet.greenPoints}',
-                          label: 'Green points',
+                      if (showPickups) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: MetricTile(
+                            icon: HugeIcons.strokeRoundedDeliveryBox01,
+                            value: rupees(pickupTotal),
+                            label: 'Pickup payouts',
+                          ),
                         ),
-                      ),
+                      ],
+                      if (role.earnsRewards) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: MetricTile(
+                            icon: HugeIcons.strokeRoundedStar,
+                            value: '${wallet.greenPoints}',
+                            label: 'Green points',
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const _SplitNote(),
+                  _SplitNote(showPickups: showPickups),
                   const SizedBox(height: 24),
-                  _Tabs(
-                    selected: _tab,
-                    onSelect: (index) => setState(() => _tab = index),
-                  ),
-                  const SizedBox(height: 18),
+                  if (showPickups) ...[
+                    _Tabs(
+                      selected: _tab,
+                      onSelect: (index) => setState(() => _tab = index),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                   if (entries.isEmpty)
-                    const EmptyState(
+                    EmptyState(
                       icon: HugeIcons.strokeRoundedWallet01,
                       title: 'No payments yet',
-                      message:
-                          'Sell waste to a recycler or complete a pickup, and the money shows up here.',
+                      message: showPickups
+                          ? 'Sell waste to a recycler or complete a pickup, and the money shows up here.'
+                          : 'Buy or sell material in the marketplace, and the money shows up here.',
                     )
                   else
                     ListCard(
@@ -204,10 +231,15 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
 }
 
 class _BalanceCard extends StatelessWidget {
-  const _BalanceCard({required this.wallet, required this.pickupTotal});
+  const _BalanceCard({
+    required this.wallet,
+    required this.pickupTotal,
+    required this.showPickups,
+  });
 
   final Wallet wallet;
   final double pickupTotal;
+  final bool showPickups;
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +284,9 @@ class _BalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Plus ${rupees(pickupTotal)} paid directly for pickups',
+            showPickups
+                ? 'Plus ${rupees(pickupTotal)} paid directly for pickups'
+                : 'Marketplace trades settle straight into this balance',
             style: TextStyle(
               fontSize: 13.5,
               color: Colors.white.withValues(alpha: 0.62),
@@ -265,7 +299,9 @@ class _BalanceCard extends StatelessWidget {
 }
 
 class _SplitNote extends StatelessWidget {
-  const _SplitNote();
+  const _SplitNote({required this.showPickups});
+
+  final bool showPickups;
 
   @override
   Widget build(BuildContext context) {
@@ -281,10 +317,12 @@ class _SplitNote extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        const Expanded(
+        Expanded(
           child: Text(
-            'The wallet ledger records marketplace trades. Pickup payouts are settled by the collector and shown separately.',
-            style: TextStyle(
+            showPickups
+                ? 'The wallet ledger records marketplace trades. Pickup payouts are settled by the collector and shown separately.'
+                : 'The wallet ledger records every marketplace purchase and sale you settle.',
+            style: const TextStyle(
               fontSize: 12.5,
               height: 1.45,
               color: uiInkTertiary,

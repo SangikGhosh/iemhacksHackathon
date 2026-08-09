@@ -16,7 +16,9 @@ import 'package:greentech/Widget/MapWidgets/MapCanvas.dart';
 import 'package:greentech/Widget/UiKit.dart';
 
 class PickupScreen extends ConsumerStatefulWidget {
-  const PickupScreen({super.key});
+  const PickupScreen({super.key, this.standalone = false});
+
+  final bool standalone;
 
   @override
   ConsumerState<PickupScreen> createState() => _PickupScreenState();
@@ -116,6 +118,9 @@ class _PickupScreenState extends ConsumerState<PickupScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: CitizenAppBar(
+        onBack: widget.standalone
+            ? () => context.canPop() ? context.pop() : context.go('/home')
+            : null,
         title: 'Pickups',
         subtitle: active == 0
             ? 'Nothing scheduled right now'

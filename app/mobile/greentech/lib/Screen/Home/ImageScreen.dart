@@ -7,8 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:greentech/Model/AppUser.dart';
 import 'package:greentech/Model/Detection.dart';
+import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
+import 'package:greentech/Screen/Pickup/PickupRequestSheet.dart';
 import 'package:greentech/Service/ApiService.dart';
 import 'package:greentech/Service/ToastService.dart';
 import 'package:greentech/Utils/avatar_helper.dart';
@@ -18,7 +21,9 @@ import 'package:greentech/Widget/ScanWidgets/ScanStage.dart';
 import 'package:greentech/Widget/UiKit.dart';
 
 class ImageScreen extends ConsumerStatefulWidget {
-  const ImageScreen({super.key});
+  const ImageScreen({super.key, this.standalone = false});
+
+  final bool standalone;
 
   @override
   ConsumerState<ImageScreen> createState() => _ImageScreenState();
@@ -45,6 +50,8 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
   }
 
   bool get _hasImage => _file != null;
+
+  Role get _role => ref.watch(sessionProvider).value?.role ?? Role.citizen;
 
   Future<void> _pickFrom(ImageSource source) async {
     try {
@@ -124,6 +131,8 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
         ref.read(sessionProvider.notifier).refresh();
       }
 
+      ref.read(detectionHistoryProvider.notifier).refresh();
+
       _revealResult();
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -149,6 +158,29 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
     });
   }
 
+  Future<void> _requestPickup() async {
+    final detection = _result;
+    if (detection == null) return;
+
+    final pickup = await showPickupRequestSheet(
+      context,
+      scan: detection.toHistoryItem(),
+    );
+
+    if (pickup == null || !mounted) return;
+
+    ToastService.show(
+      'Pickup requested. We are finding a collector.',
+      ToastType.success,
+      context,
+    );
+
+    await ref.read(pickupsProvider.notifier).refresh();
+
+    if (!mounted) return;
+    context.go('/pickup');
+  }
+
   void _reset() {
     setState(() {
       _file = null;
@@ -166,6 +198,7 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
   Widget build(BuildContext context) {
     final result = _result;
     final showingResult = result != null;
+    final earnsRewards = _role.earnsRewards;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -191,7 +224,7 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
             ),
             if (!_hasImage) ...[
               const SizedBox(height: 36),
-              const _HowItWorks(),
+              _HowItWorks(earnsRewards: earnsRewards),
               const SizedBox(height: 28),
               const _PrivacyNote(),
             ],
@@ -205,7 +238,7 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
             ],
             if (showingResult) ...[
               const SizedBox(height: 32),
-              ScanResultView(detection: result),
+              ScanResultView(detection: result, showRewards: earnsRewards),
             ],
           ],
         ),
@@ -227,7 +260,21 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
       centerTitle: false,
       automaticallyImplyLeading: false,
       toolbarHeight: 82,
-      titleSpacing: 20,
+      titleSpacing: widget.standalone ? 4 : 20,
+      leadingWidth: widget.standalone ? 72 : null,
+      leading: widget.standalone
+          ? Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Center(
+                child: UiCircleButton(
+                  icon: HugeIcons.strokeRoundedArrowLeft01,
+                  onTap: () =>
+                      context.canPop() ? context.pop() : context.go('/home'),
+                  size: 40,
+                ),
+              ),
+            )
+          : null,
       title: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +295,9 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
                 ? 'Here is what we found'
                 : _hasImage
                 ? 'Ready when you are'
-                : 'Turn your waste into points and cash',
+                : _role.earnsRewards
+                ? 'Turn your waste into points and cash'
+                : 'Check what a material is worth',
             style: const TextStyle(
               color: uiInkSecondary,
               fontSize: 14.5,
@@ -340,7 +389,9 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
     if (showingResult) {
       final detection = _result!;
       final canRequestPickup =
-          detection.eligible && detection.recommendation.pickupRecommended;
+          _role.canRequestPickup &&
+          detection.eligible &&
+          detection.recommendation.pickupRecommended;
 
       return Column(
         key: const ValueKey('actions.result'),
@@ -350,7 +401,7 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
             UiPrimaryButton(
               label: 'Request a pickup',
               icon: HugeIcons.strokeRoundedDeliveryBox01,
-              onTap: () => context.go('/pickup'),
+              onTap: _requestPickup,
             ),
             const SizedBox(height: 12),
             UiSecondaryButton(
@@ -418,16 +469,26 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
 }
 
 class _HowItWorks extends StatelessWidget {
-  const _HowItWorks();
+  const _HowItWorks({required this.earnsRewards});
 
-  static const List<List<String>> _steps = [
+  final bool earnsRewards;
+
+  static const List<List<String>> _rewardSteps = [
     ['Snap the waste', 'One clear photo, good light, nothing overlapping.'],
     ['We identify it', 'Materials, weight and resale value in seconds.'],
     ['Earn or hand it over', 'Collect points, or request a doorstep pickup.'],
   ];
 
+  static const List<List<String>> _valuationSteps = [
+    ['Snap the material', 'One clear photo, good light, nothing overlapping.'],
+    ['We identify it', 'Materials, weight and resale value in seconds.'],
+    ['Price the lot', 'Use the catalogue rate to judge what it is worth.'],
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final steps = earnsRewards ? _rewardSteps : _valuationSteps;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -441,7 +502,7 @@ class _HowItWorks extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Column(
             children: [
-              for (var index = 0; index < _steps.length; index++) ...[
+              for (var index = 0; index < steps.length; index++) ...[
                 if (index > 0) const UiHairline(indent: 44),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -471,7 +532,7 @@ class _HowItWorks extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _steps[index][0],
+                              steps[index][0],
                               style: const TextStyle(
                                 fontSize: 15.5,
                                 fontWeight: FontWeight.w600,
@@ -481,7 +542,7 @@ class _HowItWorks extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              _steps[index][1],
+                              steps[index][1],
                               style: const TextStyle(
                                 fontSize: 13.5,
                                 height: 1.4,
