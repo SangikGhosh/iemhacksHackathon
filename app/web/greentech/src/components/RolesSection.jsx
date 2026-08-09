@@ -52,8 +52,8 @@ export function RolesSection() {
       <div className="relative z-10 mx-auto max-w-7xl">
         <SectionHeading
           eyebrow="Access"
-          title="Five roles, one token"
-          subtitle="Role travels as a claim on the JWT. Only the first three can be self-assigned at signup — the two admin roles return 403 and have to be set directly in the database."
+          title="Five roles, one account"
+          subtitle="Your role decides what you see once you are in. The first three you pick for yourself at signup — the two admin roles are assigned by the platform team."
         />
 
         <div className="mb-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -82,7 +82,7 @@ export function RolesSection() {
                       : 'text-[10px] uppercase tracking-wide text-muted-foreground'
                   }
                 >
-                  {role.selfAssign ? 'Self-serve' : 'DB only'}
+                  {role.selfAssign ? 'Self-serve' : 'Assigned'}
                 </span>
               </div>
             </motion.div>
