@@ -30,9 +30,7 @@ export const site = {
   },
 
   links: {
-    // TODO: replace with the real Play Store listing once the app is published.
-    // Everything that offers the download reads this one value.
-    playStore: "#how-it-works",
+    apk: "/GreenRoute.apk",
     demo: "#how-it-works",
     superAdmin: "/admin/super",
     municipalAdmin: "/admin/municipal",
