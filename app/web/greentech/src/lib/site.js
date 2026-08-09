@@ -1,6 +1,5 @@
 export const site = {
   name: "GreenRoute",
-  name: "GreenRoute",
   tagline: "Scan it. Sort it. Get paid for it.",
   description:
     "A community waste-management and circular-economy platform. Citizens scan their waste, AI identifies and prices it, and a collector is dispatched — or they drop it at the nearest marked point. Everyone earns points for segregating correctly.",
@@ -20,13 +19,11 @@ export const site = {
 
   links: {
     apk: "/GreenRoute.apk",
-    apk: "/GreenRoute.apk",
     demo: "#how-it-works",
     superAdmin: "/admin/super",
     municipalAdmin: "/admin/municipal",
     github: "#",
     docs: "#tech",
-    email: "mailto:team@GreenRoute.example",
     email: "mailto:team@GreenRoute.example",
     twitter: "#",
     linkedin: "#",
@@ -243,75 +240,75 @@ export const wasteTypes = [
 export const features = [
   {
     icon: "ScanLine",
-    title: "One-shot waste detection",
+    title: "One photo is all it takes",
     description:
-      "YOLOv8m at 1280 px maps detections onto 16 waste categories, each with a bin colour, price per kg, reward points and carbon saved. Image size — not confidence — turned out to be the biggest lever: 640 → 1280 px took the reference bin from 2 detections to 6.",
-    tag: "Python · FastAPI",
+      "Point the camera at whatever you are throwing out. The app names the material, tells you which coloured bin it belongs in, what it is worth per kilo and the points you will earn — across 16 kinds of everyday waste.",
+    tag: "No forms to fill in",
   },
   {
     icon: "ShieldCheck",
-    title: "Per-class confidence floors",
+    title: "It says when it is not sure",
     description:
-      "A grey plastic jug reads as a donut at 0.35 and library shelves read as books. Raising the global floor to 0.45 removes the donut but costs three real bottles, so unreliable COCO classes get their own floor instead.",
-    tag: "Tuned on real photos",
+      "A photo taken too far away or in poor light gets sent back with a message asking for another, instead of turning into a confident wrong answer. You are never quoted a price the app could not really see.",
+    tag: "No confident guesses",
   },
   {
     icon: "Users",
-    title: "Five roles, one token",
+    title: "One account, whichever role you are",
     description:
-      "Citizen, Collector, Recycler, Municipal Admin and Super Admin. Only the first three can be self-assigned at signup — the two admin roles return 403 and must be set directly in the database.",
-    tag: "JWT · Google OAuth",
+      "Sign up as a household, a collector or a recycler using an email address or your Google account. Municipal staff accounts are issued by the municipality itself, so nobody can hand themselves admin access.",
+    tag: "Email or Google",
   },
   {
     icon: "Zap",
-    title: "Race-proof acceptance",
+    title: "Your pickup is claimed only once",
     description:
-      "A single atomic UPDATE … WHERE status = 'REQUESTED'. The read-then-write version passed every sequential test and then returned 200 to all six collectors tapping at once — five would have driven to claimed waste.",
-    tag: "Verified 6-way",
+      "When several collectors tap accept at the same moment, exactly one of them gets the job. Nobody drives across town to waste that somebody else has already taken.",
+    tag: "Tested with six at once",
   },
   {
     icon: "Route",
-    title: "Road time, not straight lines",
+    title: "Nearest by time, not by map distance",
     description:
-      "A haversine shortlist in Postgres, then the top five ranked by real driving duration. Across the Hooghly the road runs up to 1.7× the straight line, so the nearest point on a map is frequently not the nearest to drive to.",
-    tag: "Mapbox Matrix",
+      "Collection points are ranked by how long they actually take to reach. Across the Hooghly the road can run nearly twice the straight-line distance, so the closest dot on a map is often not the closest place to go.",
+    tag: "Real road times",
   },
   {
     icon: "Boxes",
-    title: "Stop aggregation",
+    title: "Fewer trips for the same waste",
     description:
-      "Drop-offs sharing a collection point collapse into one stop — six requests become a two-stop route. Capacity is enforced by weight, not item count, and anything that will not fit comes back in deferredPickupIds.",
-    tag: "80 kg vehicle",
+      "Drop-offs left at the same collection point are grouped into a single stop, so six requests can become a two-stop round. A vehicle is filled by weight, and anything that will not fit is kept for the next run.",
+    tag: "Six requests, two stops",
   },
   {
     icon: "Coins",
-    title: "Points that reward the right thing",
+    title: "Points that reward sorting, not volume",
     description:
-      "Drop-off pays 8 points/kg against doorstep's 5, because it saves the municipality a vehicle trip. Scan points are per item rather than per kg, so a banana peel worth ₹0 still earns credit for correct segregation.",
-    tag: "Server-side only",
+      "Carrying waste to a collection point earns 8 points a kilo against 5 for a doorstep pickup, because it saves the municipality a trip. Even a banana peel worth ₹0 earns points, because sorting it correctly is the whole idea.",
+    tag: "8 points a kilo",
   },
   {
     icon: "History",
-    title: "History that scales",
+    title: "Your totals are always ready",
     description:
-      "Totals come from aggregate SQL across the user's entire history, so a profile screen is one call rather than walking every page. Paging the ids first avoids Hibernate loading every row into memory to paginate in Java.",
-    tag: "HHH90003004 avoided",
+      "Everything you have ever scanned, what it weighed and what it earned you, on one screen that opens straight away — however long you have been using the app.",
+    tag: "Opens instantly",
   },
 ]
 
 export const featureChecklist = [
-  "Email OTP signup with a 10-minute TTL",
-  "Google OAuth — one endpoint for signup and login",
-  "Scan history, paginated and scoped to the caller",
-  "Doorstep and drop-off collection modes",
-  "Cancellation locked once a collector accepts",
-  "Release hands a pickup back without cancelling it",
+  "Sign up with an email code, or with Google",
+  "Every scan you have made, kept in one place",
+  "Choose a doorstep pickup or a drop-off",
+  "Cancel any request before a collector takes it",
+  "A collector can hand a job back without cancelling it",
   "155 collection points across 4 municipalities",
-  "Encoded polyline returned with every route",
-  "Estimate and reality stored side by side",
-  "Transactional welcome, OTP and sign-in-alert mail",
-  "Ineligible scans still stored as a complete record",
-  "Bounding boxes in the original image's coordinates",
+  "Turn-by-turn route for the collector's whole round",
+  "The quoted price and the weighed price, side by side",
+  "Welcome, sign-in and verification emails",
+  "Photos the app cannot price are still saved for you",
+  "Points added the moment a pickup is completed",
+  "Free to use, no ads and no charge to a household",
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -452,44 +449,49 @@ export const limitations = [
 
 export const faqs = [
   {
-    question: "Did you train your own detection model?",
+    question: "What is GreenRoute, in one line?",
     answer:
-      "No, and we would rather say so plainly. Detection uses YOLOv8 Medium pretrained on COCO — 25.9M parameters, trained by Ultralytics on roughly 118k hand-annotated photos. Training a waste detector from scratch was not realistic in a hackathon, so we made the recognition layer swappable and put the engineering into the domain layer: material taxonomy, bin routing, weight-based pricing and the confidence rules that catch what the model gets wrong. Drop trained weights in and the API contract does not change.",
+      "An app that tells you what your waste is worth and then gets someone to come and take it. You photograph what you are throwing out, the app names the material and the bin it belongs in, quotes a price and credits you points — then a collector comes to your door, or you drop it at a marked point nearby.",
   },
   {
-    question: "Is there an LLM anywhere in this?",
+    question: "Does it cost anything to use?",
     answer:
-      "Not in the detection path. The aiSummary field is four conditional string concatenations — no API call, no model, no network. It is instant, free, works offline and cannot hallucinate a number that contradicts the JSON beside it. The content comes from a real CNN's detections; the sentence is templated.",
+      "No. The app is free, there are no ads and a household is never charged. You are the one being paid — in cash from the collector for what the waste is worth, and in points for having sorted it correctly.",
   },
   {
-    question: "How accurate is the price?",
+    question: "What can I actually scan?",
     answer:
-      "The vision model contributes only the count. It cannot see whether a bottle is 250 ml or 2 L, whether it is empty or full, or how thick the plastic is. So the real error is not the ±15% band — it is the unit-weight assumption. That is why the final price is set by the collector's scale on any mixed or multi-item scan. The quote sets expectations; the scale decides payment.",
+      "Sixteen kinds of everyday waste: plastic and glass bottles, cans, paper, cardboard, food containers, plastic cups, scrap metal, batteries, light bulbs, electronics, cloth, wrappers and food waste. Every one of them resolves to a blue, green, red or grey bin, so you always know where it should go.",
   },
   {
-    question: "Why rank collection points by driving time instead of distance?",
+    question: "How much is this really worth?",
     answer:
-      "Because across the Hooghly the road runs up to 1.7× the straight line. Measured on real seeded data, a point 1.32 km away in a straight line is 2.25 km by road, and the nearest point on a map is frequently not the nearest to drive to. Ranking on haversine alone sends people to the wrong bank of the river. A haversine shortlist narrows candidates in Postgres, then Mapbox Matrix ranks the top five by real duration.",
+      "Less than people expect for one item, and more than they expect over a month. A photo of a single full bin came back as 13 plastic bottles worth around ₹9. The value is in doing it every week — and in the points, which build up faster than the cash and are what a municipality can reward you for.",
   },
   {
-    question: "What stops two collectors claiming the same pickup?",
+    question: "Who actually comes to collect it?",
     answer:
-      "Acceptance is a single atomic UPDATE … WHERE status = 'REQUESTED' AND collector_id IS NULL. Whoever the database applies first wins; everyone else affects zero rows and gets a 409. This matters — the read-then-write version passed every sequential test and then returned 200 to all six collectors tapping at the same instant.",
+      "Registered collectors working in your area. With a doorstep request every nearby collector is notified at once and the first to accept takes the job, so you are not left waiting on one person. With a drop-off you carry it to a marked collection point yourself, which pays more because it saves a vehicle trip.",
   },
   {
-    question: "Can a citizen cancel after a collector is on the way?",
+    question: "How is the price decided — could I be short-changed?",
     answer:
-      "No. Cancellation is only allowed while the status is REQUESTED, because once a collector accepts they may already be travelling. If the collector genuinely cannot make it they call release instead, which returns the pickup to the open feed so the citizen keeps their request rather than being dropped.",
+      "The app's figure is an estimate from what it can see in the photo. The final price comes from the collector weighing the waste in front of you. Both numbers are kept side by side in your history, so an estimate and what you were actually paid are always there to compare.",
   },
   {
-    question: "Why does drop-off pay more than doorstep?",
+    question: "What happens if the app gets it wrong?",
     answer:
-      "8 points per kg against 5, because carrying waste to a marked point saves the municipality an entire vehicle trip. Both rates are environment-tunable, and points are credited on completion using the collector's weighed figure when available — never the client's word.",
+      "If a photo is blurry, taken from too far away or has no waste in it, you are asked to take another rather than handed a confident wrong answer. It also cannot tell a 250 ml bottle from a two-litre one — which is exactly why the scale, not the camera, decides what you are paid.",
   },
   {
-    question: "Are the collection points real?",
+    question: "Can I cancel after a collector has accepted?",
     answer:
-      "They are seeded demo data, generated by geocoding real localities — Shibpur, Salkia, Bally, Liluah, Belur, Santragachi, Tikiapara, Salt Lake and Barrackpore — through the Mapbox Geocoding API, then validated to fall inside district bounds. They are not an official municipal bin register. One thing we learned the hard way: geocoding administrative names is unreliable, since \"Howrah Municipal Corporation\" resolves to a town in Maharashtra. Locality names resolve correctly.",
+      "Not once someone has accepted, because they may already be on their way to you. You can cancel freely up until that moment. If the collector cannot make it after all they hand the job back, and your request returns to the queue for someone else instead of being lost.",
+  },
+  {
+    question: "Is my area covered?",
+    answer:
+      "Today the network covers Howrah and North 24 Parganas in West Bengal — 155 collection points across four municipalities, including Shibpur, Salkia, Bally, Liluah, Belur, Santragachi, Tikiapara, Salt Lake and Barrackpore. Those points are demo data built from real localities rather than an official municipal bin register, so treat them as a working map, not a published one.",
   },
 ]
 

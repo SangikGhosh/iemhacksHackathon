@@ -20,19 +20,19 @@ export function TechStack() {
           <div className="grid divide-y divide-border lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {[
               {
-                title: 'Clients',
-                port: 'Flutter · React',
-                body: 'The mobile app and both web consoles talk to exactly one service, and always with a JWT.',
+                title: 'Mobile and web',
+                stack: 'Flutter · React',
+                body: 'The Android app and both admin consoles are the only things a person ever touches. They talk to a single backend, always over an authenticated connection.',
               },
               {
-                title: 'api-java',
-                port: ':8080',
-                body: 'The system of record. Authenticates the caller, forwards the image, stores the result and credits points inside a single transaction.',
+                title: 'Application backend',
+                stack: 'Spring Boot · Java 17',
+                body: 'The system of record. It signs people in, passes the photo on for recognition, stores the result and credits the points — all as one operation that either finishes or does not.',
               },
               {
-                title: 'api-python',
-                port: ':8000',
-                body: 'Never called by a client directly. It has no auth of its own, so it belongs on a private network or bound to localhost.',
+                title: 'Detection service',
+                stack: 'FastAPI · YOLOv8',
+                body: 'Does the image recognition and nothing else. No app talks to it directly, so it stays on a private network behind the backend.',
               },
             ].map((node, i) => (
               <motion.div
@@ -44,8 +44,8 @@ export function TechStack() {
                 className="p-7"
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="font-mono text-sm font-medium">{node.title}</h3>
-                  <Mono>{node.port}</Mono>
+                  <h3 className="text-base font-medium">{node.title}</h3>
+                  <Mono>{node.stack}</Mono>
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground text-pretty">
                   {node.body}

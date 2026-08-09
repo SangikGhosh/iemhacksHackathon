@@ -4,12 +4,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 
 export function FAQ() {
   return (
-    <section id="faq" className="px-5 pb-56 pt-24 sm:px-6 md:pb-72 md:pt-32">
+    <section id="faq" className="px-5 pb-[max(22rem,34vw)] pt-24 sm:px-6 md:pt-32">
       <div className="mx-auto max-w-3xl">
         <SectionHeading
           eyebrow="Questions"
-          title="Your Questions' Answered"
-          subtitle="Including the uncomfortable ones. Where the honest answer is a limitation, that is the answer given."
+          title="Your questions, answered"
+          subtitle="Including the uncomfortable ones. Where the honest answer is a limitation, that is the answer you get."
         />
 
         <Accordion type="single" collapsible className="border-t border-border">

@@ -72,8 +72,8 @@ export function Footer() {
                 {site.tagline} A community waste-management and circular-economy platform for{' '}
                 {site.region.label}.
               </p>
-              <p className="mb-6 font-mono text-xs text-muted-foreground">
-                {site.hackathon.event} · {site.hackathon.track} · {site.hackathon.code}
+              <p className="mb-6 text-xs text-muted-foreground">
+                155 collection points · 4 municipalities · 16 kinds of waste
               </p>
 
               <div className="flex flex-wrap gap-2.5">
@@ -122,10 +122,10 @@ export function Footer() {
 
           <div className="flex flex-col items-center justify-between gap-3 border-t border-border pt-8 text-center md:flex-row md:text-left">
             <p className="text-xs text-muted-foreground">
-              © 2026 {site.name}. Built for {site.hackathon.event}.
+              © 2026 {site.name}. Free to use, no ads.
             </p>
             <p className="text-xs text-muted-foreground text-pretty">
-              Detection by YOLOv8 pretrained on COCO · collection points are seeded demo data
+              Android 7.0+ · {site.region.label} · collection points are demo data for now
             </p>
           </div>
         </div>

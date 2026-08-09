@@ -17,8 +17,8 @@ export default function FeaturesSection() {
       <div className="relative z-10 mx-auto max-w-7xl">
         <SectionHeading
           eyebrow="What it does"
-          title="Eight decisions worth defending"
-          subtitle="Not a feature list — the specific engineering choices that make the difference between a demo and something a municipality could actually run."
+          title="Eight things it gets right"
+          subtitle="What actually changes for a household, a collector and a municipality when the app is doing the sorting, the pricing and the routing."
         />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -39,7 +39,7 @@ export default function FeaturesSection() {
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-gradient-to-br from-brand-50 to-white">
                       <Icon className="h-5 w-5 text-brand-700" strokeWidth={1.6} />
                     </span>
-                    <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] tracking-wide text-muted-foreground">
                       {feature.tag}
                     </span>
                   </div>
@@ -60,9 +60,9 @@ export default function FeaturesSection() {
               Sixteen materials, four bins
             </h3>
             <p className="mb-8 leading-relaxed text-muted-foreground text-pretty">
-              Every detection resolves to a bin colour, and the bin is what the citizen actually
-              acts on. Anything unmapped falls back to Mixed Waste in the grey bin rather than
-              guessing.
+              Whatever you scan, the answer is a bin colour — that is the only thing you have to act
+              on. Anything the app cannot place goes to mixed waste in the grey bin rather than being
+              guessed at.
             </p>
 
             <div className="space-y-3">
@@ -97,11 +97,10 @@ export default function FeaturesSection() {
 
           <div>
             <h3 className="mb-3 font-serif text-3xl font-normal text-balance">
-              Shipped and verified
+              Already working today
             </h3>
             <p className="mb-8 leading-relaxed text-muted-foreground text-pretty">
-              Twelve behaviours that already work end to end against real PostgreSQL, a real Mapbox
-              account and a real photo of a full waste bin.
+              Twelve things you can do in the app right now — not planned, not coming soon.
             </p>
 
             <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
