@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Download } from 'lucide-react'
 
+import appLogoMark from '@/assets/AppLogoMark.png'
+import authScreenImage from '@/assets/AuthScreenImage.jpg'
 import { site } from '@/lib/site'
 import { AnimatedText } from './AnimatedText'
 
@@ -132,39 +134,61 @@ export function Hero() {
                   330x691 canvas the frame is cut for, then scaled per
                   breakpoint, so it stays pixel-identical at every phone width. */}
               <div
-                className="absolute z-20 overflow-hidden rounded-[21px] md:rounded-[25px] lg:rounded-[32px]"
+                className="absolute z-20 overflow-hidden rounded-[34px] bg-black md:rounded-[41px] lg:rounded-[51px]"
                 style={{ top: '1.2%', bottom: '1.2%', left: '3%', right: '3%' }}
               >
+                <img
+                  src={authScreenImage}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+
                 <div
-                  className="flex h-[691px] w-[330px] origin-top-left flex-col items-center justify-center px-8 text-center [--s:0.667] md:[--s:0.8] lg:[--s:1]"
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      'linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.38) 28%, rgba(0,0,0,0.5) 74%, rgba(0,0,0,0.85) 100%)',
+                  }}
+                />
+
+                <div
+                  className="absolute top-0 left-0 h-[691px] w-[330px] origin-top-left [--s:0.667] md:[--s:0.8] lg:[--s:1]"
                   style={{ transform: 'scale(var(--s))' }}
                 >
-                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-1.5 shadow-lg">
-                    <img src="/logo-mark.png" alt="" className="h-full w-full object-contain" />
-                  </span>
+                  <div className="relative h-full w-full">
+                    <div className="relative flex h-full flex-col px-6 pt-6 pb-7 text-center">
+                      <div className="flex-[3]" />
 
-                  <p className="mt-5 text-[19px] font-medium tracking-tight text-white">
-                    {site.name}
-                  </p>
-                  <p className="mt-1.5 text-[12px] leading-relaxed text-white/45">
-                    Scan your waste. Earn points.
-                    <br />
-                    Get it collected.
-                  </p>
+                      <img src={appLogoMark} alt="" className="mx-auto w-[34px]" />
 
-                  <a
-                    href={site.links.playStore}
-                    /* Sized on the canvas so it still lands ~32px tall once the
-                       0.667 phone scale is applied on small screens. */
-                    className="group mt-7 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[13px] font-medium text-zinc-900 transition-transform duration-300 hover:scale-[1.03] active:scale-[0.98]"
-                  >
-                    <Download className="h-4 w-4 transition-transform duration-300 group-hover:translate-y-0.5" />
-                    Download our app
-                  </a>
+                      <p className="mt-5 text-[36px] font-bold leading-none tracking-[-1.4px] text-white">
+                        {site.name}
+                      </p>
 
-                  <p className="mt-4 text-[10px] tracking-wide text-white/30">
-                    Android 7.0+ · Free, no ads
-                  </p>
+                      <p className="mt-[18px] text-[25px] font-extralight leading-[1.28] tracking-[-0.6px] text-white">
+                        Manage your waste,
+                        <br />
+                        build our future.
+                      </p>
+
+                      <div className="flex-[2]" />
+
+                      <a
+                        href={site.links.apk}
+                        download
+                        className="group flex h-14 items-center justify-center gap-2.5 rounded-full bg-white text-[16.5px] font-semibold tracking-[-0.2px] text-zinc-900 transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <Download className="h-[19px] w-[19px] transition-transform duration-300 group-hover:translate-y-0.5" />
+                        Download the app
+                      </a>
+
+                      <p className="mt-3.5 text-[12.5px] leading-[1.4] text-white/75">
+                        Android 7.0+ · 21 MB APK · Free, no ads.
+                        <br />
+                        Scan your waste, earn points, get it collected.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
