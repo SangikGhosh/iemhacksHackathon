@@ -339,7 +339,12 @@ public class PickupService {
                 ? finalWeightKg
                 : pickup.getEstimatedWeightKg();
 
-        int points = rewardFor(pickup.getMode(), weight) + completionBonus;
+        Detection detection = detectionRepository.findById(pickup.getDetectionId()).orElse(null);
+        int segregationPoints = detection != null && !detection.isPointsAwarded()
+                ? detection.getTotalRewardPoints()
+                : 0;
+
+        int points = rewardFor(pickup.getMode(), weight) + completionBonus + segregationPoints;
         pickup.setRewardPoints(points);
 
         if (points <= 0) {
@@ -350,9 +355,16 @@ public class PickupService {
             user.setPoints(user.getPoints() + points);
             userRepository.save(user);
             pickup.setRewardAwarded(true);
+
+            if (segregationPoints > 0) {
+                detection.setPointsAwarded(true);
+                detectionRepository.save(detection);
+            }
+
             log.info("Awarded {} green points to user {} for a completed {} pickup "
-                            + "({} bonus + weight)",
-                    points, pickup.getUserId(), pickup.getMode(), completionBonus);
+                            + "({} bonus + weight + {} from the scan)",
+                    points, pickup.getUserId(), pickup.getMode(), completionBonus,
+                    segregationPoints);
         });
     }
 

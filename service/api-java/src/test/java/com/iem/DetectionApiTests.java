@@ -187,14 +187,29 @@ class DetectionApiTests {
     }
 
     @Test
-    void eligibleScanAwardsPoints() {
+    void eligibleScanQuotesPointsButCreditsNothingYet() {
         when(detectionClient.detect(any())).thenReturn(eligibleResponse());
 
         ResponseEntity<Map> response = scan();
 
-        assertEquals(true, response.getBody().get("pointsAwarded"));
-        assertEquals(65, response.getBody().get("userPointsBalance"));
-        assertEquals(65, userRepository.findById(user.getId()).orElseThrow().getPoints());
+        assertEquals(65, response.getBody().get("totalRewardPoints"),
+                "the scan still reports what the waste is worth");
+        assertEquals(false, response.getBody().get("pointsAwarded"));
+        assertEquals(0, response.getBody().get("userPointsBalance"));
+        assertEquals(0, userRepository.findById(user.getId()).orElseThrow().getPoints(),
+                "points are only credited when a collector completes the pickup");
+    }
+
+    @Test
+    void scanningRepeatedlyCreditsNothing() {
+        when(detectionClient.detect(any())).thenReturn(eligibleResponse());
+
+        for (int i = 0; i < 5; i++) {
+            scan();
+        }
+
+        assertEquals(0, userRepository.findById(user.getId()).orElseThrow().getPoints(),
+                "five scans with no pickup must not move the balance");
     }
 
     @Test
@@ -266,7 +281,9 @@ class DetectionApiTests {
         Map<?, ?> totals = (Map<?, ?>) body.get("totals");
         assertEquals(2, totals.get("scans"));
         assertEquals(13, totals.get("objects"));
-        assertEquals(65, totals.get("rewardPoints"));
+        assertEquals(0, totals.get("rewardPoints"),
+                "rewardPoints counts what has actually been credited, and no pickup has "
+                        + "completed yet");
     }
 
     @Test

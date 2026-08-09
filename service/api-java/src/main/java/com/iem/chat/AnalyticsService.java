@@ -97,9 +97,9 @@ public class AnalyticsService {
 
         StringBuilder sql = new StringBuilder("select ");
         if (groupExpression != null) {
-            sql.append(groupExpression).append(" as bucket, ");
+            sql.append(groupExpression).append(", ");
         }
-        sql.append(metric.aggregate()).append(" as value from ").append(metric.from()).append(" where 1=1");
+        sql.append(metric.aggregate()).append(" from ").append(metric.from()).append(" where 1=1");
 
         if (metric.where() != null) {
             sql.append(" and ").append(metric.where());
