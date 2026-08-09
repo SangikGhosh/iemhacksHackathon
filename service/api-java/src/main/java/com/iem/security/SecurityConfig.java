@@ -70,7 +70,11 @@ public class SecurityConfig {
             config.setAllowedOriginPatterns(List.of("*"));
             config.setAllowCredentials(false);
         } else {
-            config.setAllowedOrigins(allowedOrigins);
+            // Patterns rather than exact origins: a Vercel preview deployment gets a fresh
+            // hostname on every push, so an exact list would reject every branch build. This
+            // still matches a plain origin literally, and unlike allowedOrigins("*") it is
+            // permitted alongside credentials.
+            config.setAllowedOriginPatterns(allowedOrigins);
             config.setAllowCredentials(true);
         }
 
