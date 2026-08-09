@@ -37,7 +37,7 @@ public class LlmClient {
                      @Value("${llm.max-tokens:900}") int maxTokens,
                      @Value("${llm.timeout-seconds:45}") long timeoutSeconds,
                      @Value("${llm.referer:https://greentech.local}") String referer,
-                     @Value("${llm.title:GreenTech}") String title) {
+                     @Value("${llm.title:GreenRoute}") String title) {
 
         this.mapper = mapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();

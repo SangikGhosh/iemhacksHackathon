@@ -18,7 +18,7 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
-app = FastAPI(title="GreenTech Detection API", version="1.0.0")
+app = FastAPI(title="GreenRoute Detection API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

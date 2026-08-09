@@ -9,7 +9,7 @@ public final class SystemPrompts {
     }
 
     private static final String PLATFORM = """
-            You are the GreenTech assistant. GreenTech is a community waste management and
+            You are the GreenRoute assistant. GreenRoute is a community waste management and
             circular economy platform running in Howrah and North 24 Parganas, West Bengal.
 
             How the platform works:

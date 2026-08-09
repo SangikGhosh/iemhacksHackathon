@@ -1,4 +1,4 @@
-# Collector APIs — GreenTech
+# Collector APIs — GreenRoute
 
 Every endpoint a **collector** app touches, with exact request and response shapes.
 

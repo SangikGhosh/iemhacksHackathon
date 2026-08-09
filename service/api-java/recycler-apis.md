@@ -1,4 +1,4 @@
-# Recycler APIs — GreenTech
+# Recycler APIs — GreenRoute
 
 Every endpoint a **recycler** app touches, with exact request and response shapes.
 

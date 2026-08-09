@@ -1,4 +1,4 @@
-# Marketplace & Purchase System — GreenTech
+# Marketplace & Purchase System — GreenRoute
 
 The circular-economy half of the platform: a citizen sells segregated waste, a recycler buys it,
 and money moves between in-app wallets in one transaction.

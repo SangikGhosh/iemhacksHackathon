@@ -1,4 +1,4 @@
-# Citizen APIs — GreenTech
+# Citizen APIs — GreenRoute
 
 Every endpoint a **citizen** app touches, with exact request and response shapes.
 
