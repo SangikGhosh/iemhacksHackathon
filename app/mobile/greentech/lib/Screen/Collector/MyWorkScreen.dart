@@ -7,6 +7,7 @@ import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Screen/Collector/CompleteSheet.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class MyWorkScreen extends ConsumerStatefulWidget {
   const MyWorkScreen({super.key});
@@ -49,7 +50,7 @@ class _MyWorkScreenState extends ConsumerState<MyWorkScreen> {
     final visible = _tab == 0 ? active : done;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'My work',
         subtitle: '${active.length} to collect · ${done.length} done',

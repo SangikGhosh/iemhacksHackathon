@@ -12,6 +12,7 @@ import 'package:greentech/Service/ToastService.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/MapWidgets/MapCanvas.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class PickupDetailScreen extends ConsumerStatefulWidget {
   const PickupDetailScreen({super.key, required this.pickupId});
@@ -110,7 +111,7 @@ class _PickupDetailScreenState extends ConsumerState<PickupDetailScreen> {
     final pickup = _pickup;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Pickup',
         subtitle: pickup == null ? null : '#${pickup.shortId}',

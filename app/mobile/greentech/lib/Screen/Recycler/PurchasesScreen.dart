@@ -6,6 +6,7 @@ import 'package:greentech/Model/Listing.dart';
 import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class PurchasesScreen extends ConsumerWidget {
   const PurchasesScreen({super.key});
@@ -20,7 +21,7 @@ class PurchasesScreen extends ConsumerWidget {
     final avgRate = weight <= 0 ? 0.0 : spent / weight;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Purchases',
         subtitle: items.isEmpty

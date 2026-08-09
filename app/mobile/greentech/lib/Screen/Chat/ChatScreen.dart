@@ -11,6 +11,7 @@ import 'package:greentech/Service/ApiService.dart';
 import 'package:greentech/Service/LocationService.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -169,7 +170,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final name = ref.watch(sessionProvider).value?.firstName ?? 'there';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Assistant',
         subtitle: _capabilities.enabled

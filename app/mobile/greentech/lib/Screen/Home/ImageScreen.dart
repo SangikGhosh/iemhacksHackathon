@@ -19,6 +19,7 @@ import 'package:greentech/Widget/ScanWidgets/ScanResultView.dart';
 import 'package:greentech/Widget/ScanWidgets/ScanSourceSheet.dart';
 import 'package:greentech/Widget/ScanWidgets/ScanStage.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class ImageScreen extends ConsumerStatefulWidget {
   const ImageScreen({super.key, this.standalone = false});
@@ -201,7 +202,7 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
     final earnsRewards = _role.earnsRewards;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
         controller: _scroll,
@@ -253,7 +254,7 @@ class _ImageScreenState extends ConsumerState<ImageScreen> {
         : 'Green Route user';
 
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       surfaceTintColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,

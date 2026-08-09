@@ -14,6 +14,7 @@ import 'package:greentech/Service/ToastService.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/MapWidgets/MapCanvas.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class PickupScreen extends ConsumerStatefulWidget {
   const PickupScreen({super.key, this.standalone = false});
@@ -116,7 +117,7 @@ class _PickupScreenState extends ConsumerState<PickupScreen> {
     final active = pickups.where((p) => p.status.isOpen).length;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         onBack: widget.standalone
             ? () => context.canPop() ? context.pop() : context.go('/home')

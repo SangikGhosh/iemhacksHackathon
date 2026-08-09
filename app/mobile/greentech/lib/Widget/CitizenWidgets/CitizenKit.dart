@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import 'package:greentech/Model/Pickup.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 Color statusColor(PickupStatus status) => switch (status) {
   PickupStatus.requested => const Color(0xFFB4741C),
@@ -349,7 +350,7 @@ class CitizenAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       surfaceTintColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,

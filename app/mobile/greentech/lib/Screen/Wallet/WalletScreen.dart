@@ -10,6 +10,7 @@ import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class PaymentEntry {
   const PaymentEntry({
@@ -125,7 +126,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
     };
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Wallet',
         subtitle: 'Marketplace balance and pickup payouts',

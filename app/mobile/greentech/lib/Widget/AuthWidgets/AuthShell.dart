@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class AuthShell extends StatelessWidget {
   const AuthShell({
@@ -31,7 +32,7 @@ class AuthShell extends StatelessWidget {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: appBackground,
         resizeToAvoidBottomInset: true,
         body: SafeArea(
           child: Column(

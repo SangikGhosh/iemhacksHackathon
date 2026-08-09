@@ -9,6 +9,7 @@ import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class RewardEvent {
   const RewardEvent({
@@ -98,7 +99,7 @@ class RewardsScreen extends ConsumerWidget {
         .fold<int>(0, (sum, event) => sum + event.points);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Rewards',
         subtitle: 'Every scan and pickup earns Green Points',

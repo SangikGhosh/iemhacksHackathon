@@ -15,6 +15,7 @@ import 'package:greentech/Screen/Home/ImageScreen.dart';
 import 'package:greentech/Screen/Home/PickupScreen.dart';
 import 'package:greentech/Screen/Home/SettingScreen.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class NavTab {
   const NavTab({required this.icon, required this.label, required this.page});
@@ -169,7 +170,7 @@ class _BottomNavBarState extends ConsumerState<BottomNavBar>
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncWatcher());
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),

@@ -7,6 +7,7 @@ import 'package:greentech/Model/AppNotification.dart';
 import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -56,7 +57,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final items = ref.watch(notificationsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Notifications',
         subtitle: items.isEmpty

@@ -10,6 +10,7 @@ import 'package:greentech/Screen/Chat/ChatScreen.dart';
 import 'package:greentech/Screen/Marketplace/ListingsScreen.dart';
 import 'package:greentech/Screen/NotFound/NotFoundScreen.dart';
 import 'package:greentech/Screen/Notifications/NotificationsScreen.dart';
+import 'package:greentech/Screen/Onboarding/OnboardingScreen.dart';
 import 'package:greentech/Screen/Pickup/PickupDetailScreen.dart';
 import 'package:greentech/Screen/Home/ImageScreen.dart';
 import 'package:greentech/Screen/Home/PickupScreen.dart';
@@ -25,7 +26,7 @@ import 'package:greentech/Widget/BottomNavBar.dart';
 
 const _authRoutes = {'/auth', '/login', '/signup'};
 
-const _publicRoutes = {'/', '/auth', '/login', '/signup'};
+const _publicRoutes = {'/', '/onboarding', '/auth', '/login', '/signup'};
 
 const _rewardRoutes = {'/rewards', '/leaderboard'};
 
@@ -52,7 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (session.isLoading) return null;
 
       final location = state.matchedLocation;
-      if (location == '/') return null;
+      if (location == '/' || location == '/onboarding') return null;
 
       final signedIn = session.value != null;
 
@@ -84,6 +85,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/',
         name: 'splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/auth',

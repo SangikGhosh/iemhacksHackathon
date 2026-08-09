@@ -11,6 +11,7 @@ import 'package:greentech/Service/ApiService.dart';
 import 'package:greentech/Service/ToastService.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class ListingsScreen extends ConsumerStatefulWidget {
   const ListingsScreen({super.key});
@@ -76,7 +77,7 @@ class _ListingsScreenState extends ConsumerState<ListingsScreen> {
     final earned = sold.fold<double>(0, (sum, l) => sum + l.price);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Sell waste',
         subtitle: listings.isEmpty

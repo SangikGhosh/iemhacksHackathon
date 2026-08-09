@@ -12,6 +12,7 @@ import 'package:greentech/Utils/avatar_helper.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class JobsScreen extends ConsumerStatefulWidget {
   const JobsScreen({super.key});
@@ -76,7 +77,7 @@ class _JobsScreenState extends ConsumerState<JobsScreen> {
     final user = ref.watch(sessionProvider).value;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Open jobs',
         subtitle: jobs.isEmpty

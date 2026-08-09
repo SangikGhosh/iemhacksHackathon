@@ -9,6 +9,7 @@ import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Screen/Home/HomeScreen.dart' show LeaderRow;
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class LeaderboardScreen extends ConsumerWidget {
   const LeaderboardScreen({super.key});
@@ -28,7 +29,7 @@ class LeaderboardScreen extends ConsumerWidget {
     final meId = ref.watch(sessionProvider).value?.id;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Leaderboard',
         subtitle: board == null

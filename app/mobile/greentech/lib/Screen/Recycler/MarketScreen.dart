@@ -12,6 +12,7 @@ import 'package:greentech/Utils/avatar_helper.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class MarketScreen extends ConsumerStatefulWidget {
   const MarketScreen({super.key});
@@ -81,7 +82,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Market',
         subtitle: items.isEmpty

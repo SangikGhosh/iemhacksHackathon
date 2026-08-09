@@ -11,6 +11,7 @@ import 'package:greentech/Screen/Collector/CompleteSheet.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/MapWidgets/MapCanvas.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class RouteScreen extends ConsumerStatefulWidget {
   const RouteScreen({super.key});
@@ -78,7 +79,7 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
     final route = async.value;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Today’s route',
         subtitle: route == null

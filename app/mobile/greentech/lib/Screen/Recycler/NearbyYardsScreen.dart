@@ -13,6 +13,7 @@ import 'package:greentech/Service/LocationService.dart';
 import 'package:greentech/Widget/CitizenWidgets/CitizenKit.dart';
 import 'package:greentech/Widget/MapWidgets/MapCanvas.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 class NearbyYardsScreen extends ConsumerStatefulWidget {
   const NearbyYardsScreen({super.key});
@@ -123,7 +124,7 @@ class _NearbyYardsScreenState extends ConsumerState<NearbyYardsScreen> {
     final items = _visible;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: CitizenAppBar(
         title: 'Nearby yards',
         subtitle: _loading
