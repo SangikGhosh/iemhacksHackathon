@@ -9,7 +9,7 @@ import { PillButton } from './ui/pill-button'
 
 const navLinks = [
   { label: 'How it works', target: 'how-it-works' },
-  { label: 'Scanner', target: 'scanner' },
+  { label: 'Scanner', target: 'scanner' },     
   { label: 'Features', target: 'features' },
   { label: 'Network', target: 'network' },
   { label: 'Stack', target: 'tech' },

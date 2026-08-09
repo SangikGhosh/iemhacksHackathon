@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   GreenTech design tokens.
+   GreenRoute design tokens.
    Neutral paper base with a brand ramp lifted from the app mark: leaf green
    through to depot blue. Bin colours are product data, not decoration — they
    are the same four bins the detection service returns.

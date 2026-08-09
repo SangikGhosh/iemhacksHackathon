@@ -1,6 +1,6 @@
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-const TOKEN_KEY = 'greentech.token'
-const USER_KEY = 'greentech.user'
+const TOKEN_KEY = 'GreenRoute.token'
+const USER_KEY = 'GreenRoute.user'
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY)
 export const getStoredUser = () => {

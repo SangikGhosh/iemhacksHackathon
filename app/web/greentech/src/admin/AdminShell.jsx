@@ -56,7 +56,7 @@ export function AdminShell({
           <img src="/logo-mark.png" alt="" width={26} height={26} className="h-full w-full object-contain" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">GreenTech</p>
+          <p className="truncate text-sm font-semibold text-white">GreenRoute</p>
           <p className="truncate text-[11px] text-white/45">{roleLabel}</p>
         </div>
         <button
