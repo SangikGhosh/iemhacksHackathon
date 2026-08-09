@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 
 import { pipeline, site } from '@/lib/site'
-import { GhostWord, Mono } from './ui/section'
+import { GhostWord } from './ui/section'
 
 export function MissionSection() {
   return (
@@ -73,8 +73,8 @@ export function MissionSection() {
             How a scan becomes a collection
           </h2>
           <p className="mt-5 leading-relaxed text-muted-foreground text-pretty">
-            Six steps, two services and one photograph. Every arrow below is a real endpoint, and
-            every figure is measured rather than illustrative.
+            Six steps from the photo on your phone to points in your account. Every number below
+            comes from a real scan, not an example we made up.
           </p>
         </div>
 
@@ -93,8 +93,8 @@ export function MissionSection() {
                   {item.step}
                 </span>
                 <span className="h-px flex-1 bg-border" />
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {item.service}
+                <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-[11px] tracking-wide text-muted-foreground">
+                  {item.actor}
                 </span>
               </div>
 
@@ -102,7 +102,9 @@ export function MissionSection() {
               <p className="mb-4 text-sm leading-relaxed text-muted-foreground text-pretty">
                 {item.detail}
               </p>
-              <Mono>{item.endpoint}</Mono>
+              <span className="inline-block rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/70">
+                {item.note}
+              </span>
             </motion.li>
           ))}
         </ol>
@@ -110,3 +112,4 @@ export function MissionSection() {
     </section>
   )
 }
+

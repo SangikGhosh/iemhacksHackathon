@@ -1,16 +1,5 @@
-/**
- * Every hard fact on this site lives here, and every one of them is traceable
- * to a README in this repository. If a number changes upstream, change it once
- * here — never inline in a component.
- *
- * Sources:
- *   README.md                    · platform overview, incentives, limitations
- *   service/api-java/README.md   · endpoints, roles, pickups, geo, routing, DB
- *   service/api-python/README.md · model, pricing, tuning, waste taxonomy
- *   app/mobile/GreenRoute/README.md · Flutter client, auth flow
- */
-
 export const site = {
+  name: "GreenRoute",
   name: "GreenRoute",
   tagline: "Scan it. Sort it. Get paid for it.",
   description:
@@ -31,11 +20,13 @@ export const site = {
 
   links: {
     apk: "/GreenRoute.apk",
+    apk: "/GreenRoute.apk",
     demo: "#how-it-works",
     superAdmin: "/admin/super",
     municipalAdmin: "/admin/municipal",
     github: "#",
     docs: "#tech",
+    email: "mailto:team@GreenRoute.example",
     email: "mailto:team@GreenRoute.example",
     twitter: "#",
     linkedin: "#",
@@ -91,51 +82,51 @@ export const impactStats = [
 export const pipeline = [
   {
     step: "01",
-    title: "Citizen photographs waste",
+    title: "Take a photo of your waste",
     detail:
-      "One shot from the Flutter app. No form to fill in, no category to guess at — the camera is the whole input.",
-    endpoint: "POST /api/v1/detections",
-    service: "Java",
+      "Open the app and point the camera at whatever you are throwing out. Nothing to fill in and no category to guess at — the photo is the whole thing.",
+    note: "One photo, no forms",
+    actor: "You",
   },
   {
     step: "02",
-    title: "YOLOv8m identifies it",
+    title: "The app works out what it is",
     detail:
-      "The image is forwarded server-to-server to the detection service at 1280 px. 13 objects, PET Bottle ×13, 0.39 kg.",
-    endpoint: "POST /api/v1/detect",
-    service: "Python",
+      "It recognises the material and counts how many pieces there are. A photo of one full bin came back as 13 plastic bottles, around 0.39 kg, in about two seconds.",
+    note: "About 2 seconds",
+    actor: "The app",
   },
   {
     step: "03",
-    title: "Priced and credited",
+    title: "You see the bin, the price and the points",
     detail:
-      "Material taxonomy sets bin colour, price per kg and reward points. Points are credited server-side, in the same transaction that stores the scan.",
-    endpoint: "INR 8.29 – 11.21",
-    service: "Java",
+      "Straight away you are told which coloured bin it belongs in, roughly what it is worth and how many reward points you have earned. Those 13 bottles came to about ₹9.",
+    note: "Around ₹9 for 13 bottles",
+    actor: "The app",
   },
   {
     step: "04",
-    title: "Doorstep or drop-off",
+    title: "Choose doorstep or drop-off",
     detail:
-      "The citizen chooses. Drop-off ranks the nearest marked points by real driving time; doorstep notifies every collector at once.",
-    endpoint: "POST /api/v1/pickups",
-    service: "Java",
+      "Have a collector come to your door, or carry it to the nearest collection point yourself. The app ranks nearby points by how long they actually take to reach, not by distance on a map.",
+    note: "Drop-off earns more points",
+    actor: "You",
   },
   {
     step: "05",
-    title: "First collector to accept wins",
+    title: "A collector takes the job",
     detail:
-      "Acceptance is a single atomic conditional update. Six collectors tapping at the same instant produce exactly one winner — the other five get a 409.",
-    endpoint: "POST /{id}/accept",
-    service: "Java",
+      "Doorstep requests go to every collector in the area at once, and the first to accept is on their way. Once someone has claimed your pickup, nobody else can take it.",
+    note: "First to accept wins",
+    actor: "Collector",
   },
   {
     step: "06",
-    title: "Route optimised, waste weighed",
+    title: "It is weighed and you are paid",
     detail:
-      "Depot → stops → depot against real road durations. The collector's scale sets the final price, and disposal points are credited on completion.",
-    endpoint: "GET /api/v1/routes/my-route",
-    service: "Java + Mapbox",
+      "The collector weighs the waste in front of you and that weight sets the final price. Your points are added the moment the pickup is marked complete.",
+    note: "Final price from the scale",
+    actor: "Collector",
   },
 ]
 
@@ -524,3 +515,4 @@ export const adminRoles = [
       "Ward-level operations: live pickups, collector fleet, collection-point register and diversion against target.",
   },
 ]
+
