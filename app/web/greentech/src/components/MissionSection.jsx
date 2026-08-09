@@ -42,7 +42,7 @@ export function MissionSection() {
                 the same bag the recyclable fraction is gone — along with the money it was worth.
               </p>
               <p>
-                GreenTech puts the answer behind a camera. Photograph the waste and the app names
+                GreenRoute puts the answer behind a camera. Photograph the waste and the app names
                 the material, the bin colour, the price per kilo and the points it earns. Then it
                 does the part a citizen cannot: finds the nearest collection point by real driving
                 time, or puts the request in front of every collector at once.

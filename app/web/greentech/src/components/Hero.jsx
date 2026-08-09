@@ -88,21 +88,30 @@ export function Hero() {
         }}
       >
         <span className="block select-none text-center text-[17vw] font-bold leading-none tracking-tighter text-white sm:text-[15vw] md:text-[13.5vw] lg:text-[12.5vw]">
-          GREENTECH
+          GREENROUTE
         </span>
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-7xl">
-        <div className="mb-12 text-center">
+        <div className="mb-20 text-center">
           <div
             className={`transition-all delay-[800ms] duration-1000 ${
               isVisible ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
             }`}
           >
-            <h1 className="mx-auto mb-6 w-full max-w-6xl text-balance px-4 font-serif text-[3.5rem] font-normal leading-tight sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.5rem] xl:text-[7.5rem] 2xl:text-[8.5rem]">
-              <AnimatedText text="Scan it. Sort it. Get paid for it." delay={0.3} />
-            </h1>
-          </div>
+            <h1 className="mx-auto mb-6 w-full max-w-4xl text-balance px-4 font-serif leading-normal">
+  <AnimatedText
+    text="Scan it, Sort it."
+    className="block w-full font-bold text-center leading-normal tracking-tighter font-serif text-black text-[4.2rem] sm:text-[6.8rem]"
+    delay={0.3}
+  />
+  <AnimatedText
+    text="Get paid for it."
+    className="block w-full font-medium text-center leading-normal tracking-tighter font-serif text-black text-[2.2rem] sm:text-[2.7rem] -mt-6"
+    delay={0.5}
+  />
+</h1>
+ </div>
         </div>
 
         <div className="flex flex-col items-center justify-center gap-8">
@@ -114,7 +123,7 @@ export function Hero() {
             >
               <img
                 src="/images/iphone-frame.png"
-                alt="GreenTech on Android"
+                alt="GREENROUTE on Android"
                 className="relative z-10 h-auto w-full"
               />
 

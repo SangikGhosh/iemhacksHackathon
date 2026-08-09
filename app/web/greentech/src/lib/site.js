@@ -7,11 +7,11 @@
  *   README.md                    · platform overview, incentives, limitations
  *   service/api-java/README.md   · endpoints, roles, pickups, geo, routing, DB
  *   service/api-python/README.md · model, pricing, tuning, waste taxonomy
- *   app/mobile/greentech/README.md · Flutter client, auth flow
+ *   app/mobile/GreenRoute/README.md · Flutter client, auth flow
  */
 
 export const site = {
-  name: "GreenTech",
+  name: "GreenRoute",
   tagline: "Scan it. Sort it. Get paid for it.",
   description:
     "A community waste-management and circular-economy platform. Citizens scan their waste, AI identifies and prices it, and a collector is dispatched — or they drop it at the nearest marked point. Everyone earns points for segregating correctly.",
@@ -38,7 +38,7 @@ export const site = {
     municipalAdmin: "/admin/municipal",
     github: "#",
     docs: "#tech",
-    email: "mailto:team@greentech.example",
+    email: "mailto:team@GreenRoute.example",
     twitter: "#",
     linkedin: "#",
     instagram: "#",

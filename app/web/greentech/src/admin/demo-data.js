@@ -66,7 +66,7 @@ export const services = [
   },
   {
     name: 'Cloudinary',
-    detail: 'greentech/detections',
+    detail: 'GreenRoute/detections',
     status: 'HEALTHY',
     uptime: 99.95,
     latency: '240 ms',
