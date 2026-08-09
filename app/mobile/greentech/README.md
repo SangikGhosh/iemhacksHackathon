@@ -1,4 +1,4 @@
- Green Route — mobile app
+# Green Route — mobile app
 
 Flutter client for the Green Route waste-management and circular-economy platform.
 One app, three ground-level roles: the **Citizen** who throws waste away, the
@@ -7,6 +7,23 @@ service in [`service/api-java`](../../../service/api-java), which in turn calls 
 YOLO detection service in [`service/api-python`](../../../service/api-python).
 
 Built for Howrah and North 24 Parganas, West Bengal.
+
+**67 Dart files · 20 routes · 3 roles · Riverpod + go_router**
+
+| | |
+| --- | --- |
+| 📱 **Install** | **[www.greenroutehere.tech/GreenRoute.apk](https://www.greenroutehere.tech/GreenRoute.apk)** · 21.6 MB, arm64 |
+| ⚙️ **Talks to** | [console.jotterly.tech](https://console.jotterly.tech/health) |
+| 🌐 **Website** | [www.greenroutehere.tech](https://www.greenroutehere.tech) |
+
+### Installing the APK
+
+Android blocks sideloading by default. On the phone: download the link above, open it, and
+when prompted allow **Install unknown apps** for the browser. The build is `arm64-v8a`, which
+covers essentially every phone made since 2016; a very old 32-bit device will refuse it.
+
+No configuration is needed — the release build already points at the deployed API, so it works
+straight after install.
 
 ---
 
@@ -284,9 +301,17 @@ running backend:
 
 | Target | Base URL |
 | --- | --- |
-| Android emulator | `http://10.0.2.2:8080` |
-| iOS simulator / desktop | `http://localhost:8080` |
-| Physical device | your machine's LAN IP, or a tunnel URL |
+| Deployed API (default) | `https://console.jotterly.tech` |
+| Android emulator → local backend | `http://10.0.2.2:9000` |
+| iOS simulator / desktop → local | `http://localhost:9000` |
+| Physical device → local | your machine's LAN IP |
+
+> The default is the deployed API, so a fresh clone runs without a backend. Note the local
+> port is **9000**, which is what `service/api-java/.env` sets — not 8080.
+>
+> Never ship a build pointing at a development tunnel. A tunnel URL stops existing the moment
+> the tunnel closes, and an installed app pointing at one is dead on arrival with no way to fix
+> it short of a new release.
 
 Timeouts are deliberately tiered: **20 s** for normal calls, **90 s** for the scan
 upload, **60 s** for assistant replies. Map defaults and the fallback centre live in
@@ -415,6 +440,38 @@ tab changes. Currency and weight formatting are centralised (`rupees()`,
 server's message, `LocationException` carries a failure kind and whether settings can
 be opened, `GoogleAuthCancelled` is distinguished from `GoogleAuthException` so a user
 backing out of the Google sheet is not shown an error.
+
+---
+
+## Build and release
+
+```bash
+flutter build apk --release --split-per-abi --dart-define-from-file=dart_define.json
+```
+
+`--split-per-abi` produces one APK per architecture instead of a fat binary carrying all of
+them. The arm64 output is what gets published:
+
+```text
+build/app/outputs/apk/release/app-arm64-v8a-release.apk      ~21.6 MB
+```
+
+Publishing it to the website is one command from the web app:
+
+```bash
+cd ../../web/greentech && npm run sync:apk
+```
+
+That copies the arm64 APK into `public/GreenRoute.apk`, so the next Vercel deploy serves it at
+[www.greenroutehere.tech/GreenRoute.apk](https://www.greenroutehere.tech/GreenRoute.apk) with
+the correct `application/vnd.android.package-archive` content type.
+
+**Check `ApiConfig.baseUrl` before every release build.** It is a compile-time constant, so a
+wrong value cannot be corrected after install — only by shipping a new APK.
+
+The release build is unsigned beyond Flutter's debug-key default, which is fine for sideloading
+and a hackathon demo but not for the Play Store; that needs a real keystore and
+`android/key.properties`.
 
 ---
 

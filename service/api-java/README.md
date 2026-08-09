@@ -1,8 +1,13 @@
-# api-java — Auth & Scan History Service
+# api-java — GreenRoute Core API
 
-Spring Boot 3.5 / Java 17 / PostgreSQL. The system of record for users, points and scan
-history. Detection itself lives in the Python service (`service/api-python`); this service
-authenticates the caller, forwards the image, stores the result and credits reward points.
+Spring Boot 3.5 / Java 17 / PostgreSQL. The system of record for users, points, pickups,
+routing, the marketplace and the assistant. Detection itself lives in the Python service
+(`service/api-python`); this service authenticates the caller, forwards the image, stores the
+result and decides what it is worth.
+
+**109 source files · 45 endpoints · 9 entities · 139 tests**
+
+Deployed at **[console.jotterly.tech](https://console.jotterly.tech/health)** behind nginx.
 
 ---
 
@@ -22,6 +27,9 @@ authenticates the caller, forwards the image, stores the result and credits rewa
 - [Route optimisation](#route-optimisation)
 - [Database](#database)
 - [Points](#points)
+- [Assistant](#assistant)
+- [Docker](#docker)
+- [Deployment](#deployment)
 - [Configuration](#configuration)
 - [Errors](#errors)
 - [Testing](#testing)
@@ -802,19 +810,157 @@ query or a points audit needs.
 Points are credited **server-side only**, from the response this service fetched itself.
 Never trust a points value sent by the client.
 
+**Scanning quotes points; it does not credit them.** They are released only when a collector
+completes the pickup:
+
 ```text
-if (eligible && totalRewardPoints > 0) {
-    user.points += totalRewardPoints
-    detection.pointsAwarded = true
-}
+scan            → detection.totalRewardPoints = 65, pointsAwarded = false, balance unchanged
+request pickup  → still nothing
+collector accepts → still nothing
+collector completes:
+    points = round(finalWeightKg × rate) + completionBonus + detection.totalRewardPoints
+           =       3.2 × 5              +        20       +        65                  = 101
 ```
 
-The whole scan runs in one transaction, so a failure to store the detection also rolls back
-the points — a user can never be credited for a scan that was not saved.
+`rate` is 5/kg doorstep, 8/kg drop-off; the bonus is 20. The scan's share is guarded by
+`detection.pointsAwarded`, so a cancelled-then-re-requested pickup still credits exactly once,
+and a repeated completion credits nothing.
+
+The earlier behaviour credited on the scan itself, which meant the same photograph could be
+submitted repeatedly for points without any waste ever being handed over. Deferring the credit
+closes that while keeping the reward material-aware — sorting metal from paper still matters.
+
+`ScanPointsBackfill` runs at startup and repairs databases written under the old rule: it
+reverses points for scans that were never collected, and restates completed pickups whose
+recorded figure excluded the scan's share. It is idempotent and clamps at zero.
 
 Points come from the material table in the Python service and are **per item, not per kg**, so
 they are awarded even when the waste has no resale value. A banana peel is worth INR 0 but
 still earns 2 points for correct segregation.
+
+---
+
+## Assistant
+
+A role-aware chatbot at `POST /api/v1/chat`. It answers from **live data** using tool calling —
+not RAG.
+
+RAG retrieves text from a document corpus. "What is my wallet balance" is a row in Postgres,
+not a passage: embedding user rows would be stale the moment a pickup completes, imprecise at
+arithmetic, and — most importantly — vector similarity has no concept of row-level
+authorisation, so one user's data could surface for another. Each tool instead runs through the
+same JWT-scoped service the REST API uses, so access control is correct by construction.
+
+### Tools by role
+
+| Role | Tools | Notable |
+| --- | --- | --- |
+| Citizen | 8 | rewards, wallet, pickups, material price, nearest points, leaderboard |
+| Collector | 9 | + open jobs, optimised route |
+| Recycler | 10 | + browse listings, **evaluate_listing** |
+| Municipal admin | 11 | + `query_analytics`, snapshot, people, collection points |
+| Super admin | 12 | + municipality directory, all analytics unscoped |
+
+`ToolRegistry.resolve(role, name)` returns `null` for a tool the role does not own, so a
+citizen asking the model to "call query_analytics" gets nothing — the schema is never sent, and
+execution is refused server-side even if it were.
+
+### query_analytics
+
+Open-ended admin questions ("total transactions today", "compare waste by municipality") are
+served by a whitelisted registry rather than letting a model write SQL:
+
+**18 metrics × 7 dimensions × 6 periods.** Metric and dimension come from enums and are looked
+up, never interpolated; dates and the municipality scope are bound parameters. A municipal
+admin's queries are automatically scoped to their own area.
+
+### Context
+
+The request accepts `listingId`, `pickupId` and coordinates. When present they are described to
+the model, so "is this a good deal?" resolves against the listing the user has open without
+them restating it.
+
+### Configuration
+
+```properties
+llm.api-key=${LLM_API_KEY:}          # OpenAI-compatible; OpenRouter by default
+llm.base-url=${LLM_BASE_URL:https://openrouter.ai/api/v1}
+llm.model=${LLM_MODEL:openai/gpt-4o-mini}
+chat.history-turns=${CHAT_HISTORY_TURNS:10}
+chat.max-tool-rounds=${CHAT_MAX_TOOL_ROUNDS:4}
+```
+
+Unset the key and `/api/v1/chat/capabilities` reports `enabled: false`, so a client can hide
+the entry point rather than showing a feature that 503s. **The test profile pins it empty on
+purpose** — otherwise `mvn test` would make real, billed API calls.
+
+Conversation memory is a `chat_messages` table replayed for the last ten turns. Tool results
+are re-fetched every turn rather than replayed, so answers always reflect current data.
+
+---
+
+## Docker
+
+Multi-stage, non-root, and the JVM is told about its cgroup limit:
+
+```dockerfile
+FROM maven:3.9-eclipse-temurin-17 AS build   # dependency layer cached separately
+FROM eclipse-temurin:17-jre-jammy AS runtime # 505 MB final image
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50 -XX:+ExitOnOutOfMemoryError"
+HEALTHCHECK CMD curl -fsS "http://127.0.0.1:${APP_PORT}/health"
+```
+
+`MaxRAMPercentage` matters: without it the JVM sizes the heap from the **host's** memory, not
+the container limit, and gets OOM-killed under any memory cap.
+
+The Dockerfile builds the JAR itself rather than copying one in, so a published image never
+depends on whatever happened to be in `target/` on the machine that built it.
+
+```bash
+docker compose up -d      # from the repository root — java 9798, python 9799
+```
+
+The compose file overrides `DETECTION_BASE_URL` to `http://api-python:8000` (the service name
+on the private network) and `DB_HOST` to `host.docker.internal`, because `.env` is written for
+running on the host.
+
+> **PostgreSQL must accept connections from the Docker bridge.** A default install listens on
+> `127.0.0.1` only, and the container will get "connection refused" whatever hostname it uses:
+>
+> ```text
+> postgresql.conf : listen_addresses = 'localhost,172.17.0.1'
+> pg_hba.conf     : host greentech greentech 172.16.0.0/12 scram-sha-256
+> iptables        : -I INPUT 1 -s 172.16.0.0/12 -p tcp --dport 5432 -j ACCEPT
+> ```
+>
+> The iptables rule matches the **subnet**, not the `docker0` interface — Compose creates its
+> own bridge, so an interface-scoped rule silently misses it.
+
+---
+
+## Deployment
+
+Pushed to Docker Hub by GitHub Actions and deployed to an Oracle Cloud ARM VM.
+
+```text
+push touching service/api-java/**
+   │
+   ▼
+credential scan → mvn test (139) → package → upload JAR
+   │
+   ▼
+buildx → linux/amd64 + linux/arm64 → Docker Hub
+   │
+   ▼
+Deploy workflow → scp compose → write env from secrets → pull → up -d → wait for /health
+```
+
+`linux/arm64` is not optional — the target is aarch64. Only the Maven build is emulated and the
+output is architecture-independent bytecode, so the cost is minutes.
+
+In production nginx terminates TLS and proxies `console.jotterly.tech` to `127.0.0.1:9798`,
+with `client_max_body_size 12m` so 10 MB scan uploads are not rejected at the proxy. Health
+checks gate startup order: this service will not accept traffic until detection reports healthy.
 
 ---
 
@@ -886,18 +1032,21 @@ Validation errors join all field messages into one string, e.g.
 mvn test
 ```
 
-98 tests, all passing. Auth tests use H2; detection tests mock `DetectionClient` so they do
+139 tests, all passing. Auth tests use H2; detection tests mock `DetectionClient` so they do
 not need the Python service running.
 
 | Suite | Covers |
 | --- | --- |
 | `ApiApplicationTests` | context loads, register then login |
 | `AuthEndpointTests` | health public, `/auth/me` requires a token, unknown user 401, profile shape |
-| `DetectionApiTests` | 12 tests — see below |
-| `PickupApiTests` | 24 tests — full lifecycle, every guard, and a 6-way accept race |
+| `DetectionApiTests` | 13 tests — see below, including that scanning credits nothing |
+| `PickupApiTests` | 28 tests — full lifecycle, every guard, a 6-way accept race, and reward arithmetic |
 | `GeoRoutingTests` | 15 tests — seed integrity, nearest search, both modes, capacity, aggregation |
 | `LeaderboardTests` | 7 tests — bonus, ranking, me block, totals, clamping |
 | `MailToggleTests` | 3 tests — disabled mail never throws and never calls Resend |
+| `MarketplaceTests` | 27 tests — atomic claim, balance guard, cross-path exclusivity, filter and sort |
+| `ChatApiTests` | 18 tests — role-scoped tools, conversation isolation, every analytics metric |
+| `ScanPointsBackfillTests` | 9 tests — reversal, idempotency, zero clamp, ledger consistency |
 | `MarketplaceTests` | 18 tests — listing, buying, wallet ledger, and a 5-way buy race |
 | `AdminApiTests` | 13 tests — seeding, role limits, scoping, deactivation, point and municipality CRUD |
 

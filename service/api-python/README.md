@@ -25,6 +25,8 @@ There is **no LLM in the detection path**. Nothing calls out to an AI API.
 - [Configuration](#configuration)
 - [Cloudinary](#cloudinary)
 - [Testing](#testing)
+- [Docker](#docker)
+- [Deployment](#deployment)
 - [Known limitations](#known-limitations)
 - [Integrating with the Java service](#integrating-with-the-java-service)
 - [Design decisions](#design-decisions)
@@ -645,6 +647,85 @@ truncated JPEG -> 400; missing field -> 422; 6000x6000 PNG -> 200; PNG input wor
 
 **Timing** (12-core CPU, no GPU): cold first request ~3.4s including model load, warm requests
 **~1.8s**, of which ~1.8s is inference. A GPU would cut this by roughly 10x.
+
+---
+
+## Docker
+
+The image is built CPU-only and ships with the model weights already inside.
+
+```dockerfile
+# CPU wheels, not the default CUDA build — that pulls ~3 GB of nvidia libraries
+# onto a service with no GPU.
+RUN pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision \
+ && pip install -r requirements.txt \
+ && pip uninstall -y opencv-python && pip install opencv-python-headless
+
+# Downloaded at BUILD time, so the first request never waits on a GitHub fetch.
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8m.pt')"
+```
+
+Three decisions worth knowing:
+
+**CPU-only torch.** `pip install torch` defaults to the CUDA build. On a machine with no GPU
+that is roughly 3 GB of dead weight; the CPU index brings the image to **2.57 GB**.
+
+**Headless OpenCV.** Ultralytics depends on `opencv-python`, the desktop build, which links X11
+libraries that do not exist in a slim image — the build fails with
+`ImportError: libxcb.so.1`. The headless variant has the same API, no X dependency, and is the
+correct choice for a server. Inference is unaffected: verified, the same photo returns the same
+13 objects.
+
+**Weights baked in.** If `yolov8m.pt` is absent, Ultralytics downloads 50 MB on first use. In
+production that means the first scan of the day stalls on a network fetch and fails if egress
+is blocked. The image carries it at `/app/yolov8m.pt`, and `/health` reports which file loaded.
+
+Runs as a non-root user with a writable `YOLO_CONFIG_DIR`, and declares a healthcheck that
+Compose uses to gate the Java service's startup.
+
+```bash
+docker compose up -d      # from the repository root — python on 9799
+```
+
+---
+
+## Deployment
+
+Built and published by GitHub Actions, then deployed alongside the Java service.
+
+```text
+push touching service/api-python/**
+   │
+   ▼
+credential scan → compileall → docker build → START THE CONTAINER → curl /health
+   │
+   ▼
+buildx → linux/arm64 → Docker Hub → Deploy workflow
+```
+
+The pipeline **starts the image and probes it** rather than trusting a green build. A build
+only proves the layers assembled; the smoke test proves the service boots, loads the baked-in
+weights and serves traffic. It also asserts `"weights"` is present in the health payload, so
+dropping the weights from the image is caught before publication rather than in production.
+
+**The build runs on a native `ubuntu-24.04-arm` runner.** The deployment target is an aarch64
+VM, and cross-compiling PyTorch and Ultralytics under QEMU takes roughly 40 minutes and
+routinely hits the job timeout. On real ARM hardware it is minutes, and the smoke test then
+exercises the exact architecture that will run in production.
+
+### Not publicly reachable, on purpose
+
+This service has **no authentication of any kind**. Every endpoint is open to whoever can reach
+the port. In production it is therefore bound only to the private Compose network:
+
+```text
+internet ──► nginx ──► api-java :9798 ──► api-python :8000  (no public route)
+```
+
+Port 9799 is not exposed through nginx and is blocked at the cloud firewall — verified. The
+only way to run a detection is `POST /api/v1/detections` on the Java service, which requires a
+JWT. If this service were public, anyone could run unlimited inference on the CPU and upload to
+the Cloudinary account on your quota.
 
 ---
 
