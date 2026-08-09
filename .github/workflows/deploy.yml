@@ -1,0 +1,131 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["api-java", "api-python"]
+    branches: [main]
+    types:
+      - completed
+
+  # Redeploy the current images without pushing a commit — useful when only a secret changed.
+  workflow_dispatch:
+
+# A commit touching both services finishes two CI runs, and without this they would deploy
+# concurrently and race on `docker compose up`. cancel-in-progress is false so the first run
+# finishes rather than leaving a half-started stack behind.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          ENV_JAVA: ${{ secrets.ENV_JAVA }}
+          ENV_PYTHON: ${{ secrets.ENV_PYTHON }}
+          OWNER: ${{ github.repository_owner }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: ENV_JAVA,ENV_PYTHON,OWNER
+          script_stop: true
+
+          script: |
+            set -e
+            mkdir -p /opt/greentech
+            cd /opt/greentech
+
+            # Both env files are stored as ONE secret each rather than one secret per key.
+            # Per-key secrets would force this script to enumerate every variable, and adding
+            # a new one later would silently ship an empty value to production. They also
+            # collide: APP_PORT exists in both services with different values.
+            #
+            # Quoted heredoc: the content is injected by the SSH action as an environment
+            # variable, so the shell must not expand anything inside it — several values
+            # legitimately contain $ and other shell metacharacters.
+            umask 077
+            printf '%s\n' "$ENV_JAVA"   > .env.java
+            printf '%s\n' "$ENV_PYTHON" > .env.python
+
+            for f in .env.java .env.python; do
+              if [ ! -s "$f" ]; then
+                echo "::error::$f is empty — check the ENV_* repository secrets"
+                exit 1
+              fi
+            done
+
+            OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+
+            # Written here so the server topology always matches the repository. Quoted
+            # delimiter: nothing in this file needs shell expansion.
+            cat > docker-compose.yml <<EOF
+            name: greentech
+
+            services:
+              api-python:
+                image: ghcr.io/${OWNER_LC}/greentech-api-python:latest
+                container_name: greentech-api-python
+                restart: unless-stopped
+                env_file:
+                  - ./.env.python
+                environment:
+                  APP_PORT: 8000
+                ports:
+                  - "9799:8000"
+                networks:
+                  - greentech
+
+              api-java:
+                image: ghcr.io/${OWNER_LC}/greentech-api-java:latest
+                container_name: greentech-api-java
+                restart: unless-stopped
+                depends_on:
+                  api-python:
+                    condition: service_healthy
+                env_file:
+                  - ./.env.java
+                environment:
+                  APP_PORT: 8080
+                  DB_HOST: host.docker.internal
+                  DETECTION_BASE_URL: http://api-python:8000
+                extra_hosts:
+                  - "host.docker.internal:host-gateway"
+                ports:
+                  - "9798:8080"
+                networks:
+                  - greentech
+
+            networks:
+              greentech:
+                driver: bridge
+            EOF
+
+            docker compose pull
+            docker compose up -d --remove-orphans
+
+            # Untagged layers accumulate fast — the python image carries torch and is several
+            # GB, so a handful of deploys would otherwise fill the disk.
+            docker image prune -f
+
+            echo "Waiting for both services to report healthy..."
+            for i in $(seq 1 30); do
+              JAVA=$(curl -fsS http://127.0.0.1:9798/health 2>/dev/null || true)
+              PY=$(curl -fsS http://127.0.0.1:9799/health 2>/dev/null || true)
+              if [ -n "$JAVA" ] && [ -n "$PY" ]; then
+                echo "api-java  : $JAVA"
+                echo "api-python: $PY"
+                exit 0
+              fi
+              sleep 10
+            done
+
+            echo "::error::Services did not come up within 5 minutes"
+            docker compose ps
+            docker compose logs --tail 80
+            exit 1
