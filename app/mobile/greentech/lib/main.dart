@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:greentech/Routes/Routes.dart';
-
-const Color appBackground = Color(0xFFF5F1EE);
-const Color appInk = Color(0xFF141414);
+import 'package:greentech/Utils/AppColors.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +16,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
+      title: 'Green Route',
       debugShowCheckedModeBanner: false,
       routerConfig: ref.watch(routerProvider),
 

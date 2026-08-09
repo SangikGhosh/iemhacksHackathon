@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public interface PickupRepository extends JpaRepository<Pickup, UUID> {
@@ -37,4 +38,15 @@ public interface PickupRepository extends JpaRepository<Pickup, UUID> {
     Page<Pickup> findByCollectorId(UUID collectorId, Pageable pageable);
 
     Page<Pickup> findByStatusAndCollectorIdIsNull(PickupStatus status, Pageable pageable);
+
+    @Query("""
+           select p, d from Pickup p, Detection d
+            where d.id = p.detectionId
+              and p.status = com.iem.enums.PickupStatus.COMPLETED
+              and p.rewardAwarded = true
+              and d.pointsAwarded = true
+              and d.totalRewardPoints > 0
+              and p.rewardPoints < d.totalRewardPoints + :completionBonus
+           """)
+    List<Object[]> awardedBeforeScanPointsMoved(@Param("completionBonus") int completionBonus);
 }

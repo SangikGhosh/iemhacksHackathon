@@ -56,20 +56,14 @@ public class DetectionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException("User not found", 404));
 
-        Integer balance = user.getPoints();
-
-        if (detection.isEligible() && detection.getTotalRewardPoints() > 0) {
-            user.setPoints(user.getPoints() + detection.getTotalRewardPoints());
-            userRepository.save(user);
-            detection.setPointsAwarded(true);
-            balance = user.getPoints();
-            log.info("Awarded {} points to user {} for detection",
-                    detection.getTotalRewardPoints(), userId);
-        }
-
+        detection.setPointsAwarded(false);
         detectionRepository.save(detection);
 
-        return DetectionResponse.from(detection, result.message(), balance);
+        log.info("Scan {} for user {} is worth {} points, credited when a collector "
+                        + "completes the pickup",
+                detection.getId(), userId, detection.getTotalRewardPoints());
+
+        return DetectionResponse.from(detection, result.message(), user.getPoints());
     }
 
     @Transactional(readOnly = true)

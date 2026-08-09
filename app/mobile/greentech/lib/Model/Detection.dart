@@ -222,6 +222,24 @@ class Detection {
 
   bool get needsCollectorPrice => actionRequired == 'COLLECTOR_SETS_PRICE';
 
+  DetectionHistoryItem toHistoryItem() => DetectionHistoryItem(
+    id: id,
+    imageUrl: imageUrl,
+    status: status,
+    eligible: eligible,
+    totalObjects: totalObjects,
+    totalRewardPoints: totalRewardPoints,
+    pointsAwarded: pointsAwarded,
+    currency: offer.currency,
+    estimatedOffer: offer.estimatedOffer,
+    estimatedWeightKg: impact.estimatedWeightKg,
+    carbonSavedKg: impact.carbonSavedKg,
+    primaryBin: recommendation.primaryBin,
+    pickupRecommended: recommendation.pickupRecommended,
+    materials: materials.map((item) => item.material).toList(),
+    createdAt: DateTime.now(),
+  );
+
   factory Detection.fromJson(Map<String, dynamic> json) => Detection(
     id: json['id']?.toString() ?? '',
     eligible: json['eligible'] == true,
@@ -248,6 +266,141 @@ class Detection {
             .toList() ??
         const [],
   );
+}
+
+class DetectionHistoryItem {
+  const DetectionHistoryItem({
+    required this.id,
+    required this.imageUrl,
+    required this.status,
+    required this.eligible,
+    required this.totalObjects,
+    required this.totalRewardPoints,
+    required this.pointsAwarded,
+    required this.currency,
+    required this.estimatedOffer,
+    required this.estimatedWeightKg,
+    required this.carbonSavedKg,
+    required this.primaryBin,
+    required this.pickupRecommended,
+    required this.materials,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String? imageUrl;
+  final DetectionStatus status;
+  final bool eligible;
+  final int totalObjects;
+  final int totalRewardPoints;
+  final bool pointsAwarded;
+  final String currency;
+  final double estimatedOffer;
+  final double estimatedWeightKg;
+  final double carbonSavedKg;
+  final WasteBin primaryBin;
+  final bool pickupRecommended;
+  final List<String> materials;
+  final DateTime? createdAt;
+
+  String get materialSummary =>
+      materials.isEmpty ? 'No materials' : materials.join(', ');
+
+  factory DetectionHistoryItem.fromJson(Map<String, dynamic> json) =>
+      DetectionHistoryItem(
+        id: json['id']?.toString() ?? '',
+        imageUrl: json['imageUrl']?.toString(),
+        status: DetectionStatus.fromWire(json['status']?.toString()),
+        eligible: json['eligible'] == true,
+        totalObjects: _int(json['totalObjects']),
+        totalRewardPoints: _int(json['totalRewardPoints']),
+        pointsAwarded: json['pointsAwarded'] == true,
+        currency: json['currency']?.toString() ?? 'INR',
+        estimatedOffer: _double(json['estimatedOffer']),
+        estimatedWeightKg: _double(json['estimatedWeightKg']),
+        carbonSavedKg: _double(json['carbonSavedKg']),
+        primaryBin: WasteBin.fromWire(json['primaryBin']?.toString()),
+        pickupRecommended: json['pickupRecommended'] == true,
+        materials:
+            (json['materials'] as List?)
+                ?.map((item) => item.toString())
+                .toList() ??
+            const [],
+        createdAt: DateTime.tryParse(
+          json['createdAt']?.toString() ?? '',
+        )?.toLocal(),
+      );
+}
+
+class DetectionTotals {
+  const DetectionTotals({
+    required this.scans,
+    required this.objects,
+    required this.rewardPoints,
+    required this.carbonSavedKg,
+    required this.estimatedEarnings,
+  });
+
+  final int scans;
+  final int objects;
+  final int rewardPoints;
+  final double carbonSavedKg;
+  final double estimatedEarnings;
+
+  static const DetectionTotals empty = DetectionTotals(
+    scans: 0,
+    objects: 0,
+    rewardPoints: 0,
+    carbonSavedKg: 0,
+    estimatedEarnings: 0,
+  );
+
+  factory DetectionTotals.fromJson(Map<String, dynamic> json) =>
+      DetectionTotals(
+        scans: _int(json['scans']),
+        objects: _int(json['objects']),
+        rewardPoints: _int(json['rewardPoints']),
+        carbonSavedKg: _double(json['carbonSavedKg']),
+        estimatedEarnings: _double(json['estimatedEarnings']),
+      );
+}
+
+class DetectionHistory {
+  const DetectionHistory({
+    required this.items,
+    required this.totalItems,
+    required this.hasMore,
+    required this.totals,
+  });
+
+  final List<DetectionHistoryItem> items;
+  final int totalItems;
+  final bool hasMore;
+  final DetectionTotals totals;
+
+  static const DetectionHistory empty = DetectionHistory(
+    items: [],
+    totalItems: 0,
+    hasMore: false,
+    totals: DetectionTotals.empty,
+  );
+
+  factory DetectionHistory.fromJson(Map<String, dynamic> json) =>
+      DetectionHistory(
+        items:
+            (json['items'] as List?)
+                ?.whereType<Map>()
+                .map(
+                  (item) => DetectionHistoryItem.fromJson(
+                    item.cast<String, dynamic>(),
+                  ),
+                )
+                .toList() ??
+            const [],
+        totalItems: _int(json['totalItems']),
+        hasMore: json['hasMore'] == true,
+        totals: DetectionTotals.fromJson(_map(json['totals'])),
+      );
 }
 
 Map<String, dynamic> _map(Object? value) =>

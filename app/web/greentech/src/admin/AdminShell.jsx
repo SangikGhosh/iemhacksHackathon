@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, Bell, LogOut, Menu, Search, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { Assistant } from './Assistant'
 
 /**
  * Chrome shared by both consoles: a fixed sidebar on desktop, a slide-over on
@@ -55,7 +56,7 @@ export function AdminShell({
           <img src="/logo-mark.png" alt="" width={26} height={26} className="h-full w-full object-contain" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">GreenTech</p>
+          <p className="truncate text-sm font-semibold text-white">GreenRoute</p>
           <p className="truncate text-[11px] text-white/45">{roleLabel}</p>
         </div>
         <button
@@ -301,6 +302,8 @@ export function AdminShell({
 
         <main className="px-4 py-6 sm:px-6 sm:py-8">{children}</main>
       </div>
+
+      <Assistant roleLabel={roleLabel} />
     </div>
   )
 }

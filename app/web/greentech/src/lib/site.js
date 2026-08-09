@@ -1,5 +1,6 @@
 export const site = {
   name: "GreenRoute",
+  name: "GreenRoute",
   tagline: "Scan it. Sort it. Get paid for it.",
   description:
     "A community waste-management and circular-economy platform. Citizens scan their waste, AI identifies and prices it, and a collector is dispatched — or they drop it at the nearest marked point. Everyone earns points for segregating correctly.",
@@ -19,11 +20,13 @@ export const site = {
 
   links: {
     apk: "/GreenRoute.apk",
+    apk: "/GreenRoute.apk",
     demo: "#how-it-works",
     superAdmin: "/admin/super",
     municipalAdmin: "/admin/municipal",
     github: "#",
     docs: "#tech",
+    email: "mailto:team@GreenRoute.example",
     email: "mailto:team@GreenRoute.example",
     twitter: "#",
     linkedin: "#",

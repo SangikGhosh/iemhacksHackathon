@@ -36,4 +36,14 @@ public interface DetectionRepository extends JpaRepository<Detection, UUID> {
 
     @Query("select coalesce(sum(d.estimatedOffer), 0) from Detection d where d.userId = :userId")
     BigDecimal sumEstimatedOffer(@Param("userId") UUID userId);
+
+    @Query("""
+           select d from Detection d
+            where d.pointsAwarded = true
+              and d.totalRewardPoints > 0
+              and not exists (select 1 from Pickup p
+                               where p.detectionId = d.id
+                                 and p.status = com.iem.enums.PickupStatus.COMPLETED)
+           """)
+    List<Detection> creditedWithoutACompletedPickup();
 }

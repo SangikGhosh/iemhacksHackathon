@@ -56,7 +56,7 @@ export function Footer() {
         aria-hidden="true"
       >
         <h2 className="whitespace-nowrap text-center text-[17vw] font-bold leading-[0.85] tracking-tighter text-white sm:text-[15vw] md:text-[13.5vw] lg:text-[12.5vw]">
-          GREENTECH
+          GREENROUTE
         </h2>
       </div>
 

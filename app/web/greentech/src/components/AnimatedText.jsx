@@ -10,7 +10,7 @@ import { motion } from 'motion/react'
 export function AnimatedText({
   text,
   delay = 0,
-  className = 'font-bold text-center text-6xl leading-[0.75] tracking-tighter font-serif text-black lg:text-9xl',
+  className = 'font-bold text-center text-6xl leading-[0.85] tracking-tighter font-serif text-black lg:text-9xl',
 }) {
   const words = text.split(' ')
   let charIndex = 0

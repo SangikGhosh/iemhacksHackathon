@@ -34,8 +34,11 @@ public class MarketplaceController {
     @GetMapping("/listings")
     public ResponseEntity<ListingListResponse> browse(@AuthenticationPrincipal UserPrincipal principal,
                                                       @RequestParam(defaultValue = "0") int page,
-                                                      @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(marketplaceService.browse(principal.getId(), page, size));
+                                                      @RequestParam(defaultValue = "20") int size,
+                                                      @RequestParam(required = false) String material,
+                                                      @RequestParam(required = false) String sort) {
+        return ResponseEntity.ok(
+                marketplaceService.browse(principal.getId(), page, size, material, sort));
     }
 
     @GetMapping("/listings/mine")

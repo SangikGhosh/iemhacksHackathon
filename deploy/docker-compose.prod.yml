@@ -1,0 +1,60 @@
+name: greentech
+
+# Production topology, copied to the server by .github/workflows/deploy.yml.
+#
+# Kept in the repository rather than generated inside the deploy script: a heredoc nested in a
+# YAML block scalar inside a shell script is three levels of quoting, and getting any of them
+# wrong produces a file docker compose rejects with a parser error that points at the wrong
+# thing. This file is also reviewable in a pull request.
+#
+# ${DOCKER_USER} is substituted by compose from the .env file the deploy writes alongside it.
+
+services:
+  api-python:
+    image: ${DOCKER_USER}/greentech-api-python:latest
+    container_name: greentech-api-python
+    restart: unless-stopped
+    env_file:
+      - ./.env.python
+    environment:
+      APP_PORT: 8000
+    ports:
+      - "9799:8000"
+    networks:
+      - greentech
+
+  api-java:
+    image: ${DOCKER_USER}/greentech-api-java:latest
+    container_name: greentech-api-java
+    restart: unless-stopped
+    # Java calls the detection service on every scan, so it must not accept traffic before
+    # python can answer. The healthcheck in the python image is what makes this meaningful.
+    depends_on:
+      api-python:
+        condition: service_healthy
+    env_file:
+      - ./.env.java
+    # These override the env file, which is written for the service rather than the topology.
+    # Python is reachable by service name on the compose network; PostgreSQL runs on the host,
+    # so it is reached through the gateway address.
+    #
+    # The host must accept connections from the compose bridge for this to work:
+    #   postgresql.conf : listen_addresses = 'localhost,172.17.0.1'
+    #   pg_hba.conf     : host greentech greentech 172.16.0.0/12 scram-sha-256
+    #   iptables        : -I INPUT 1 -s 172.16.0.0/12 -p tcp --dport 5432 -j ACCEPT
+    # The iptables rule deliberately matches the subnet rather than the docker0 interface —
+    # compose creates its own bridge, so an interface-scoped rule silently misses it.
+    environment:
+      APP_PORT: 8080
+      DB_HOST: host.docker.internal
+      DETECTION_BASE_URL: http://api-python:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9798:8080"
+    networks:
+      - greentech
+
+networks:
+  greentech:
+    driver: bridge

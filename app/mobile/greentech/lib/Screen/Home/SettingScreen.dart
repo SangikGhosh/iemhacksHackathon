@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'package:greentech/Model/AppUser.dart';
+import 'package:greentech/Provider/CitizenProviders.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Utils/avatar_helper.dart';
 import 'package:greentech/Widget/UiKit.dart';
+import 'package:greentech/Utils/AppColors.dart';
 
 const String _appVersion = '1.0.0';
 
@@ -25,7 +27,7 @@ class SettingScreen extends ConsumerWidget {
 
     if (confirmed != true) return;
 
-    await ref.read(sessionProvider.notifier).signOut();
+    await signOutAndReset(ref);
     router.go('/auth');
   }
 
@@ -33,10 +35,17 @@ class SettingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
     final user = session.value;
+    final unread = ref
+        .watch(notificationsProvider)
+        .where((item) => !item.read)
+        .length;
     final loading = user == null && session.isLoading;
+    final role = user?.role ?? Role.citizen;
+    final earnsRewards = role.earnsRewards;
+    final showsWallet = role != Role.recycler;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       appBar: _buildAppBar(user),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: uiInk))
@@ -49,6 +58,100 @@ class SettingScreen extends ConsumerWidget {
                   _IdentityCard(user: user),
                   const SizedBox(height: 14),
                   _StatRow(user: user),
+                  const SizedBox(height: 30),
+                  if (role == Role.collector) ...[
+                    const UiSectionLabel('Collector tools'),
+                    _Group(
+                      rows: [
+                        _Row(
+                          icon: HugeIcons.strokeRoundedScanImage,
+                          title: 'Scan waste',
+                          subtitle: 'Identify material and catalogue rate',
+                          onTap: () => context.push('/scan'),
+                        ),
+                        _Row(
+                          icon: HugeIcons.strokeRoundedMapsLocation01,
+                          title: 'Unload points',
+                          subtitle: 'MRFs and scrap yards near you',
+                          onTap: () => context.push('/yards'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+                  if (role == Role.recycler) ...[
+                    const UiSectionLabel('Recycler tools'),
+                    _Group(
+                      rows: [
+                        _Row(
+                          icon: HugeIcons.strokeRoundedScanImage,
+                          title: 'Scan waste',
+                          subtitle: 'Identify material and catalogue rate',
+                          onTap: () => context.push('/scan'),
+                        ),
+                        _Row(
+                          icon: HugeIcons.strokeRoundedMapsLocation01,
+                          title: 'Nearby yards',
+                          subtitle: 'MRFs and scrap yards by road time',
+                          onTap: () => context.push('/yards'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+                  const UiSectionLabel('Assistant'),
+                  _Group(
+                    rows: [
+                      _Row(
+                        icon: HugeIcons.strokeRoundedSparkles,
+                        title: 'Ask Green Route',
+                        subtitle: switch (role) {
+                          Role.collector =>
+                            'Open jobs, your route and capacity',
+                          Role.recycler => 'Stock, deals, wallet and purchases',
+                          _ => 'Points, pickups, prices and drop-offs',
+                        },
+                        onTap: () => context.push('/chat'),
+                      ),
+                      _Row(
+                        icon: HugeIcons.strokeRoundedNotification01,
+                        title: 'Notifications',
+                        subtitle: unread == 0
+                            ? 'Pickup updates'
+                            : '$unread unread',
+                        onTap: () => context.push('/notifications'),
+                      ),
+                    ],
+                  ),
+                  if (showsWallet || earnsRewards) ...[
+                    const SizedBox(height: 30),
+                    UiSectionLabel(earnsRewards ? 'Money & rewards' : 'Money'),
+                    _Group(
+                      rows: [
+                        if (showsWallet)
+                          _Row(
+                            icon: HugeIcons.strokeRoundedWallet01,
+                            title: 'Wallet',
+                            subtitle: 'Balance and payment history',
+                            onTap: () => context.push('/wallet'),
+                          ),
+                        if (earnsRewards) ...[
+                          _Row(
+                            icon: HugeIcons.strokeRoundedStar,
+                            title: 'Rewards',
+                            subtitle: 'Green Points and how you earned them',
+                            onTap: () => context.push('/rewards'),
+                          ),
+                          _Row(
+                            icon: HugeIcons.strokeRoundedRanking,
+                            title: 'Leaderboard',
+                            subtitle: 'Where you rank in the community',
+                            onTap: () => context.push('/leaderboard'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 30),
                   const UiSectionLabel('Account'),
                   _Group(
@@ -64,30 +167,35 @@ class SettingScreen extends ConsumerWidget {
                         title: 'Password & security',
                         soon: true,
                       ),
-                      const _Row(
+                      _Row(
                         icon: HugeIcons.strokeRoundedNotification01,
                         title: 'Notifications',
-                        soon: true,
+                        subtitle: unread == 0
+                            ? 'Pickup updates'
+                            : '$unread unread',
+                        onTap: () => context.push('/notifications'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 30),
-                  const UiSectionLabel('Activity'),
-                  _Group(
-                    rows: [
-                      _Row(
-                        icon: HugeIcons.strokeRoundedDeliveryBox01,
-                        title: 'My pickups',
-                        subtitle: 'Requests and collections',
-                        onTap: () => context.go('/pickup'),
-                      ),
-                      const _Row(
-                        icon: HugeIcons.strokeRoundedScanImage,
-                        title: 'Scan history',
-                        soon: true,
-                      ),
-                    ],
-                  ),
+                  if (role.canRequestPickup) ...[
+                    const SizedBox(height: 30),
+                    const UiSectionLabel('Activity'),
+                    _Group(
+                      rows: [
+                        _Row(
+                          icon: HugeIcons.strokeRoundedDeliveryBox01,
+                          title: 'My pickups',
+                          subtitle: 'Requests and collections',
+                          onTap: () => context.go('/pickup'),
+                        ),
+                        const _Row(
+                          icon: HugeIcons.strokeRoundedScanImage,
+                          title: 'Scan history',
+                          soon: true,
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 30),
                   const UiSectionLabel('Preferences'),
                   const _Group(
@@ -136,7 +244,7 @@ class SettingScreen extends ConsumerWidget {
     final role = (user?.role ?? Role.citizen).label;
 
     return AppBar(
-      backgroundColor: Colors.white,
+      backgroundColor: appBackground,
       surfaceTintColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -270,21 +378,25 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final role = user?.role ?? Role.citizen;
+
     return Row(
       children: [
-        Expanded(
-          child: _StatTile(
-            icon: HugeIcons.strokeRoundedStar,
-            value: '${user?.points ?? 0}',
-            label: 'Reward points',
-            accent: uiGreen,
+        if (role.earnsRewards) ...[
+          Expanded(
+            child: _StatTile(
+              icon: HugeIcons.strokeRoundedStar,
+              value: '${user?.points ?? 0}',
+              label: 'Reward points',
+              accent: uiGreen,
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
+        ],
         Expanded(
           child: _StatTile(
             icon: HugeIcons.strokeRoundedUserGroup,
-            value: (user?.role ?? Role.citizen).label,
+            value: role.label,
             label: 'Your role',
           ),
         ),

@@ -343,4 +343,125 @@ class MarketplaceTests {
         assertNotNull(wallet.getBody().get("greenPoints"));
         assertEquals(0, ((List<?>) wallet.getBody().get("transactions")).size());
     }
+
+    private ResponseEntity<Map> requestPickup(UUID detectionId) {
+        return rest.postForEntity("/api/v1/pickups", new HttpEntity<>(Map.of(
+                "detectionId", detectionId.toString(),
+                "address", "12 Park Street, Kolkata",
+                "contactPhone", "+919876543210"), auth(citizenToken)), Map.class);
+    }
+
+    @Test
+    void wasteGoingToACollectorCannotAlsoBeSold() {
+        UUID scan = detection();
+        assertEquals(HttpStatus.CREATED, requestPickup(scan).getStatusCode());
+
+        ResponseEntity<Map> listing = createListing(Map.of(
+                "detectionId", scan.toString(), "price", 150.0));
+
+        assertEquals(HttpStatus.CONFLICT, listing.getStatusCode());
+        assertTrue(((String) listing.getBody().get("error")).contains("already going to a collector"));
+        assertEquals(0, listingRepository.count(), "no listing may exist for collected waste");
+    }
+
+    @Test
+    void wasteOnTheMarketplaceCannotAlsoBeCollected() {
+        UUID scan = detection();
+        assertEquals(HttpStatus.CREATED,
+                createListing(Map.of("detectionId", scan.toString(), "price", 150.0)).getStatusCode());
+
+        ResponseEntity<Map> pickup = requestPickup(scan);
+
+        assertEquals(HttpStatus.CONFLICT, pickup.getStatusCode());
+        assertTrue(((String) pickup.getBody().get("error")).contains("listed on the marketplace"));
+    }
+
+    @Test
+    void sellingIsStillPossibleAfterThePickupIsCancelled() {
+        UUID scan = detection();
+        String pickupId = (String) requestPickup(scan).getBody().get("id");
+
+        rest.exchange("/api/v1/pickups/" + pickupId + "/cancel", HttpMethod.POST,
+                new HttpEntity<>(Map.of(), auth(citizenToken)), Map.class);
+
+        ResponseEntity<Map> listing = createListing(Map.of(
+                "detectionId", scan.toString(), "price", 150.0));
+
+        assertEquals(HttpStatus.CREATED, listing.getStatusCode(),
+                "a cancelled pickup releases the waste back to the seller");
+    }
+
+    @Test
+    void collectionIsStillPossibleAfterTheListingIsWithdrawn() {
+        UUID scan = detection();
+        String listingId = (String) createListing(Map.of(
+                "detectionId", scan.toString(), "price", 150.0)).getBody().get("id");
+
+        rest.exchange("/api/v1/listings/" + listingId + "/cancel", HttpMethod.POST,
+                new HttpEntity<>(Map.of(), auth(citizenToken)), Map.class);
+
+        assertEquals(HttpStatus.CREATED, requestPickup(scan).getStatusCode(),
+                "a withdrawn listing releases the waste back for collection");
+    }
+
+    @Test
+    void aManualListingIsUnaffectedByTheGuards() {
+        assertEquals(HttpStatus.CREATED, manualListing().getStatusCode(),
+                "a listing with no scan attached has nothing to cross-check");
+    }
+
+    private ResponseEntity<Map> browse(String query) {
+        return rest.exchange("/api/v1/listings" + query, HttpMethod.GET,
+                new HttpEntity<>(auth(recyclerToken)), Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> itemsOf(ResponseEntity<Map> response) {
+        return (List<Map<String, Object>>) response.getBody().get("items");
+    }
+
+    @Test
+    void browseCanBeFilteredByMaterial() {
+        createListing(Map.of("material", "Cardboard", "weightKg", 5.0, "price", 45.0));
+        createListing(Map.of("material", "Scrap Metal", "weightKg", 12.0, "price", 540.0));
+
+        assertEquals(2, itemsOf(browse("")).size(), "no filter returns everything open");
+
+        List<Map<String, Object>> filtered = itemsOf(browse("?material=cardboard"));
+        assertEquals(1, filtered.size(), "matching is case insensitive and partial");
+        assertEquals("Cardboard", filtered.get(0).get("material"));
+
+        assertEquals(0, itemsOf(browse("?material=glass")).size());
+    }
+
+    @Test
+    void browseCanBeSortedByPrice() {
+        createListing(Map.of("material", "Cardboard", "weightKg", 5.0, "price", 45.0));
+        createListing(Map.of("material", "Scrap Metal", "weightKg", 12.0, "price", 540.0));
+
+        List<Map<String, Object>> cheapest = itemsOf(browse("?sort=price_asc"));
+        assertEquals(45.0, ((Number) cheapest.get(0).get("price")).doubleValue());
+
+        List<Map<String, Object>> dearest = itemsOf(browse("?sort=price_desc"));
+        assertEquals(540.0, ((Number) dearest.get(0).get("price")).doubleValue());
+    }
+
+    @Test
+    void anUnknownSortIsRejectedRatherThanIgnored() {
+        ResponseEntity<Map> response = browse("?sort=cheapest");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(((String) response.getBody().get("error")).contains("Unknown sort"));
+    }
+
+    @Test
+    void aSoldListingLeavesTheBrowseFeed() {
+        String id = (String) manualListing().getBody().get("id");
+        assertEquals(1, itemsOf(browse("")).size());
+
+        rest.exchange("/api/v1/listings/" + id + "/interested", HttpMethod.POST,
+                new HttpEntity<>(Map.of(), auth(recyclerToken)), Map.class);
+
+        assertEquals(0, itemsOf(browse("")).size(), "browse only ever shows OPEN stock");
+    }
 }
