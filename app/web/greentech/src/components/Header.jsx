@@ -113,7 +113,7 @@ export function Header() {
                 tile — invisible against the scrolled header, a crisp app icon
                 against the hero. */}
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-900 p-0.6 shadow-sm">
-              <img src="/AppLogoMark.png" alt="" width={28} height={28} className="h-full w-full object-contain" />
+              <img src="/AppLogoMark.png" alt="" width={28} height={28} className="h-full w-full object-contain bg-neutral-900 rounded-lg p-0.5" />
             </span>
             <span className="text-lg font-semibold tracking-tight">{site.name}</span>
           </a>

@@ -65,7 +65,7 @@ export function Footer() {
           <div className="mb-12 grid grid-cols-2 gap-8 md:grid-cols-6">
             <div className="col-span-2">
               <div className="mb-4 flex items-center gap-2">
-                <img src="/logo-mark.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+                <img src="/AppLogoMark.png" alt="" width={28} height={28} className="h-7 w-7 object-contain bg-neutral-900 rounded-lg p-0.5" />
                 <span className="font-semibold">{site.name}</span>
               </div>
               <p className="mb-2 max-w-xs text-sm leading-relaxed text-muted-foreground text-pretty">
