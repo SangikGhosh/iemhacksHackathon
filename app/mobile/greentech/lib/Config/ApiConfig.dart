@@ -1,8 +1,7 @@
 class ApiConfig {
   const ApiConfig._();
 
-  static const String baseUrl =
-      'https://ece6-2409-40e0-1b8-4e8c-ad8d-9b43-129-9dfe.ngrok-free.app';
+  static const String baseUrl = 'https://console.jotterly.tech';
 
   static const String googleServerClientId =
       '819603256526-to4me888iii7rh7tpipjac3jufqtam89.apps.googleusercontent.com';
