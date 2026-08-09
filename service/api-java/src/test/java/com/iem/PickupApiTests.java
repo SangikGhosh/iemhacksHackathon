@@ -414,4 +414,69 @@ class PickupApiTests {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals(0, pickupRepository.count());
     }
+
+    private int points() {
+        return userRepository.findById(citizen.getId()).orElseThrow().getPoints();
+    }
+
+    private void completeAsCollector(UUID pickupId, double weightKg) {
+        post("/api/v1/pickups/" + pickupId + "/accept", collectorToken, null);
+        post("/api/v1/pickups/" + pickupId + "/complete", collectorToken,
+                Map.of("finalWeightKg", weightKg, "finalAmount", 96.0));
+    }
+
+    @Test
+    void nothingIsCreditedUntilACollectorCompletesThePickup() {
+        assertEquals(0, points(), "a stored scan on its own credits nothing");
+
+        UUID pickup = createAndGetId();
+        assertEquals(0, points(), "requesting a pickup credits nothing either");
+
+        post("/api/v1/pickups/" + pickup + "/accept", collectorToken, null);
+        assertEquals(0, points(), "acceptance is not completion");
+
+        post("/api/v1/pickups/" + pickup + "/complete", collectorToken,
+                Map.of("finalWeightKg", 3.2, "finalAmount", 128.0));
+
+        assertEquals(101, points(),
+                "20 completion bonus + 3.2 kg at 5 points/kg doorstep + 65 from the scan");
+    }
+
+    @Test
+    void aCancelledPickupCreditsNothingAndTheScanCanStillEarnLater() {
+        UUID first = createAndGetId();
+        post("/api/v1/pickups/" + first + "/cancel", citizenToken, Map.of("reason", "not home"));
+
+        assertEquals(0, points(), "a cancelled pickup must not credit the scan");
+
+        UUID second = createAndGetId();
+        completeAsCollector(second, 2.0);
+
+        assertEquals(95, points(),
+                "20 bonus + 2 kg at 5 points/kg + the 65 the scan was always worth");
+    }
+
+    @Test
+    void aSecondCompletionCannotCreditTheScanTwice() {
+        UUID pickup = createAndGetId();
+        completeAsCollector(pickup, 2.0);
+        int afterFirst = points();
+
+        ResponseEntity<Map> repeat = post("/api/v1/pickups/" + pickup + "/complete",
+                collectorToken, Map.of("finalWeightKg", 2.0, "finalAmount", 96.0));
+
+        assertEquals(HttpStatus.CONFLICT, repeat.getStatusCode());
+        assertEquals(afterFirst, points(), "a repeated completion must not credit again");
+    }
+
+    @Test
+    void twoScansOnlyEarnForTheOneThatIsActuallyCollected() {
+        UUID collected = createAndGetId();
+        storeDetection(citizen.getId(), true);
+
+        completeAsCollector(collected, 2.0);
+
+        assertEquals(95, points(),
+                "the second scan was never handed over, so it earns nothing");
+    }
 }

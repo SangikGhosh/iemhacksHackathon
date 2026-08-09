@@ -95,6 +95,13 @@ export const api = {
   updateMunicipality: (id, payload) =>
     request(`/api/v1/admin/municipalities/${id}`, { method: 'PATCH', body: payload }),
 
+  chat: (message, conversationId) =>
+    request('/api/v1/chat', { method: 'POST', body: { message, conversationId } }),
+  chatCapabilities: () => request('/api/v1/chat/capabilities'),
+  chatConversations: (limit = 20) => request(`/api/v1/chat/conversations?limit=${limit}`),
+  chatHistory: (id) => request(`/api/v1/chat/conversations/${id}`),
+  deleteChat: (id) => request(`/api/v1/chat/conversations/${id}`, { method: 'DELETE' }),
+
   leaderboard: (limit = 10) => request(`/api/v1/leaderboard?limit=${limit}`, { auth: false }),
   listings: () => request('/api/v1/listings'),
   wasteTypes: () => request('/api/v1/collection-points/municipalities', { auth: false }),

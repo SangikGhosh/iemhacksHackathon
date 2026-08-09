@@ -9,7 +9,12 @@ import 'package:greentech/Config/ApiConfig.dart';
 import 'package:greentech/Model/AppUser.dart';
 import 'package:greentech/Model/CollectionPoint.dart';
 import 'package:greentech/Model/CollectorRoute.dart';
+import 'package:greentech/Model/Chat.dart';
 import 'package:greentech/Model/Detection.dart';
+import 'package:greentech/Model/Leaderboard.dart';
+import 'package:greentech/Model/Listing.dart';
+import 'package:greentech/Model/Pickup.dart';
+import 'package:greentech/Model/Wallet.dart';
 import 'package:greentech/Service/UserService.dart';
 
 enum ApiErrorKind { network, server }
@@ -164,6 +169,206 @@ class ApiService {
     }
   }
 
+  static Future<DetectionHistory> detectionHistory({
+    int page = 0,
+    int size = 20,
+  }) async {
+    final json = await _get('/api/v1/detections?page=$page&size=$size');
+    return DetectionHistory.fromJson(json);
+  }
+
+  static Future<Pickup> requestPickup({
+    required String detectionId,
+    required PickupMode mode,
+    String? collectionPointId,
+    String? address,
+    String? landmark,
+    String? contactPhone,
+    String? notes,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final json = await _post('/api/v1/pickups', {
+      'detectionId': detectionId,
+      'mode': mode.wire,
+      if (collectionPointId != null) 'collectionPointId': collectionPointId,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (landmark != null && landmark.isNotEmpty) 'landmark': landmark,
+      if (contactPhone != null && contactPhone.isNotEmpty)
+        'contactPhone': contactPhone,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+    });
+    return Pickup.fromJson(json);
+  }
+
+  static Future<PickupPage> pickups({int page = 0, int size = 20}) async {
+    final json = await _get('/api/v1/pickups?page=$page&size=$size');
+    return PickupPage.fromJson(json);
+  }
+
+  static Future<Pickup> pickup(String id) async {
+    final json = await _get('/api/v1/pickups/$id');
+    return Pickup.fromJson(json);
+  }
+
+  static Future<Pickup> cancelPickup(String id, {String? reason}) async {
+    final json = await _post('/api/v1/pickups/$id/cancel', {
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    });
+    return Pickup.fromJson(json);
+  }
+
+  static Future<PickupPage> availablePickups({int page = 0, int size = 50}) async {
+    final json = await _get('/api/v1/pickups/available?page=$page&size=$size');
+    return PickupPage.fromJson(json);
+  }
+
+  static Future<Pickup> acceptPickup(String id) async {
+    final json = await _post('/api/v1/pickups/$id/accept', const {});
+    return Pickup.fromJson(json);
+  }
+
+  static Future<Pickup> completePickup(
+    String id, {
+    required double finalWeightKg,
+    required double finalAmount,
+    String? collectorNotes,
+  }) async {
+    final json = await _post('/api/v1/pickups/$id/complete', {
+      'finalWeightKg': finalWeightKg,
+      'finalAmount': finalAmount,
+      if (collectorNotes != null && collectorNotes.isNotEmpty)
+        'collectorNotes': collectorNotes,
+    });
+    return Pickup.fromJson(json);
+  }
+
+  static Future<Pickup> releasePickup(String id, {String? reason}) async {
+    final json = await _post('/api/v1/pickups/$id/release', {
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    });
+    return Pickup.fromJson(json);
+  }
+
+  static Future<Wallet> wallet({int page = 0, int size = 30}) async {
+    final json = await _get('/api/v1/wallet?page=$page&size=$size');
+    return Wallet.fromJson(json);
+  }
+
+  static Future<Leaderboard> leaderboard({int limit = 20}) async {
+    final json = await _get('/api/v1/leaderboard?limit=$limit');
+    return Leaderboard.fromJson(json);
+  }
+
+  static Future<ListingPage> myListings({int page = 0, int size = 20}) async {
+    final json = await _get('/api/v1/listings/mine?page=$page&size=$size');
+    return ListingPage.fromJson(json);
+  }
+
+  static Future<ListingPage> openListings({
+    int page = 0,
+    int size = 20,
+    String? material,
+    ListingSort sort = ListingSort.newest,
+  }) async {
+    final trimmed = material?.trim() ?? '';
+    final json = await _get(
+      '/api/v1/listings?page=$page&size=$size&sort=${sort.wire}'
+      '${trimmed.isEmpty ? '' : '&material=${Uri.encodeQueryComponent(trimmed)}'}',
+    );
+    return ListingPage.fromJson(json);
+  }
+
+  static Future<Listing> createListing({
+    required double price,
+    String? detectionId,
+    String? material,
+    double? weightKg,
+    String? description,
+    String? location,
+  }) async {
+    final json = await _post('/api/v1/listings', {
+      'price': price,
+      if (detectionId != null) 'detectionId': detectionId,
+      if (material != null && material.isNotEmpty) 'material': material,
+      if (weightKg != null) 'weightKg': weightKg,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+      if (location != null && location.isNotEmpty) 'location': location,
+    });
+    return Listing.fromJson(json);
+  }
+
+  static Future<Listing> buyListing(String id) async {
+    final json = await _post('/api/v1/listings/$id/interested', const {});
+    return Listing.fromJson(json);
+  }
+
+  static Future<Listing> listing(String id) async {
+    final json = await _get('/api/v1/listings/$id');
+    return Listing.fromJson(json);
+  }
+
+  static Future<Listing> cancelListing(String id) async {
+    final json = await _post('/api/v1/listings/$id/cancel', const {});
+    return Listing.fromJson(json);
+  }
+
+  static Future<ChatCapabilities> chatCapabilities() async {
+    try {
+      final json = await _get('/api/v1/chat/capabilities');
+      return ChatCapabilities.fromJson(json);
+    } on ApiException catch (error) {
+      if (error.statusCode == 503) return ChatCapabilities.disabled;
+      rethrow;
+    }
+  }
+
+  static Future<ChatReply> sendChat({
+    required String message,
+    String? conversationId,
+    double? latitude,
+    double? longitude,
+    String? pickupId,
+    String? listingId,
+  }) async {
+    final json = await _post('/api/v1/chat', {
+      'message': message,
+      if (conversationId != null) 'conversationId': conversationId,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (pickupId != null) 'pickupId': pickupId,
+      if (listingId != null) 'listingId': listingId,
+    }, timeout: ApiConfig.chatTimeout);
+    return ChatReply.fromJson(json);
+  }
+
+  static Future<List<ChatConversation>> chatConversations({
+    int limit = 20,
+  }) async {
+    final json = await _get('/api/v1/chat/conversations?limit=$limit');
+    final items = json['conversations'] ?? json['items'] ?? json['value'];
+    return (items as List?)
+            ?.whereType<Map>()
+            .map(
+              (item) => ChatConversation.fromJson(item.cast<String, dynamic>()),
+            )
+            .toList() ??
+        const [];
+  }
+
+  static Future<List<ChatMessage>> chatTranscript(String id) async {
+    final json = await _get('/api/v1/chat/conversations/$id');
+    final items = json['messages'] ?? json['items'] ?? json['value'];
+    return (items as List?)
+            ?.whereType<Map>()
+            .map((item) => ChatMessage.fromJson(item.cast<String, dynamic>()))
+            .toList() ??
+        const [];
+  }
+
   static List<CollectionPoint> _pointsFrom(Map<String, dynamic> json) =>
       (json['points'] as List?)
           ?.whereType<Map>()
@@ -188,8 +393,9 @@ class ApiService {
 
   static Future<Map<String, dynamic>> _post(
     String path,
-    Map<String, dynamic> body,
-  ) async {
+    Map<String, dynamic> body, {
+    Duration? timeout,
+  }) async {
     final headers = await _headers();
     return _send(
       () => _client.post(
@@ -197,6 +403,7 @@ class ApiService {
         headers: headers,
         body: jsonEncode(body),
       ),
+      timeout: timeout,
     );
   }
 

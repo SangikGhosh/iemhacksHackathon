@@ -27,6 +27,12 @@ enum Role {
 
   static const List<Role> selectable = [citizen, collector, recycler];
 
+  bool get earnsRewards => this != collector && this != recycler;
+
+  bool get canRequestPickup => this != collector && this != recycler;
+
+  bool get canSellScrap => this != collector && this != recycler;
+
   static Role fromWire(String? value) =>
       values.firstWhere((role) => role.wire == value, orElse: () => citizen);
 }

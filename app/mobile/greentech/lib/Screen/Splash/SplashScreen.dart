@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
+import 'package:greentech/Screen/Onboarding/OnboardingScreen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -44,15 +45,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _start() async {
+    var seenOnboarding = true;
+
     await Future.wait([
       ref.read(sessionProvider.future),
+      OnboardingService.hasSeen().then((seen) => seenOnboarding = seen),
       _controller.forward().orCancel.catchError((_) {}),
     ]);
 
     if (!mounted) return;
-    context.go(
-      ref.read(sessionProvider).value != null ? '/home' : '/auth',
-    );
+
+    if (!seenOnboarding) {
+      context.go('/onboarding');
+      return;
+    }
+
+    context.go(ref.read(sessionProvider).value != null ? '/home' : '/auth');
   }
 
   @override

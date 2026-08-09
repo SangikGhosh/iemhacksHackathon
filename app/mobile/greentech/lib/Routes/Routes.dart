@@ -2,12 +2,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:greentech/Config/DevConfig.dart';
 import 'package:greentech/Provider/SessionProvider.dart';
 import 'package:greentech/Screen/Auth/AuthSelectionScreen.dart';
 import 'package:greentech/Screen/Auth/LoginScreen.dart';
 import 'package:greentech/Screen/Auth/SignupScreen.dart';
+import 'package:greentech/Screen/Chat/ChatScreen.dart';
+import 'package:greentech/Screen/Marketplace/ListingsScreen.dart';
 import 'package:greentech/Screen/NotFound/NotFoundScreen.dart';
+import 'package:greentech/Screen/Notifications/NotificationsScreen.dart';
+import 'package:greentech/Screen/Onboarding/OnboardingScreen.dart';
+import 'package:greentech/Screen/Pickup/PickupDetailScreen.dart';
+import 'package:greentech/Screen/Home/ImageScreen.dart';
+import 'package:greentech/Screen/Home/PickupScreen.dart';
+import 'package:greentech/Screen/Recycler/NearbyYardsScreen.dart';
+import 'package:greentech/Screen/Rewards/LeaderboardScreen.dart';
+import 'package:greentech/Screen/Rewards/RewardsScreen.dart';
+import 'package:greentech/Screen/Wallet/WalletScreen.dart';
 import 'package:greentech/Screen/Profile/ProfileScreen.dart';
 import 'package:greentech/Screen/Splash/SplashScreen.dart';
 
@@ -16,13 +26,13 @@ import 'package:greentech/Widget/BottomNavBar.dart';
 
 const _authRoutes = {'/auth', '/login', '/signup'};
 
-const _protectedRoutes = {
-  '/home',
-  '/image',
-  '/pickup',
-  '/settings',
-  '/profile',
-};
+const _publicRoutes = {'/', '/onboarding', '/auth', '/login', '/signup'};
+
+const _rewardRoutes = {'/rewards', '/leaderboard'};
+
+const _pickupRoutes = {'/pickup', '/my-pickups'};
+
+const _sellRoutes = {'/listings'};
 
 class _SessionRefresh extends ChangeNotifier {
   _SessionRefresh(Ref ref) {
@@ -40,16 +50,29 @@ final routerProvider = Provider<GoRouter>((ref) {
 
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
-      final location = state.matchedLocation;
+      if (session.isLoading) return null;
 
-      if (location == '/' || session.isLoading) return null;
+      final location = state.matchedLocation;
+      if (location == '/' || location == '/onboarding') return null;
 
       final signedIn = session.value != null;
 
       if (signedIn && _authRoutes.contains(location)) return '/home';
 
-      if (!signedIn && _protectedRoutes.contains(location)) {
-        return DevConfig.bypassAuth ? null : '/auth';
+      if (!signedIn && !_publicRoutes.contains(location)) return '/auth';
+
+      final role = session.value?.role;
+
+      if (role != null) {
+        if (!role.earnsRewards && _rewardRoutes.contains(location)) {
+          return '/home';
+        }
+        if (!role.canRequestPickup && _pickupRoutes.contains(location)) {
+          return '/home';
+        }
+        if (!role.canSellScrap && _sellRoutes.contains(location)) {
+          return '/home';
+        }
       }
 
       return null;
@@ -62,6 +85,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/',
         name: 'splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/auth',
@@ -103,6 +131,57 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/yards',
+        name: 'yards',
+        builder: (context, state) => const NearbyYardsScreen(),
+      ),
+      GoRoute(
+        path: '/scan',
+        name: 'scan',
+        builder: (context, state) => const ImageScreen(standalone: true),
+      ),
+      GoRoute(
+        path: '/my-pickups',
+        name: 'myPickups',
+        builder: (context, state) => const PickupScreen(standalone: true),
+      ),
+      GoRoute(
+        path: '/leaderboard',
+        name: 'leaderboard',
+        builder: (context, state) => const LeaderboardScreen(),
+      ),
+      GoRoute(
+        path: '/rewards',
+        name: 'rewards',
+        builder: (context, state) => const RewardsScreen(),
+      ),
+      GoRoute(
+        path: '/wallet',
+        name: 'wallet',
+        builder: (context, state) => const WalletScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: '/listings',
+        name: 'listings',
+        builder: (context, state) => const ListingsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/pickups/:id',
+        name: 'pickupDetail',
+        builder: (context, state) =>
+            PickupDetailScreen(pickupId: state.pathParameters['id'] ?? ''),
       ),
     ],
   );

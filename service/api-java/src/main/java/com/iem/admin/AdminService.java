@@ -10,6 +10,7 @@ import com.iem.model.Municipality;
 import com.iem.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,17 +46,21 @@ public class AdminService {
     private final MunicipalityRepository municipalityRepository;
     private final CollectionPointRepository pointRepository;
     private final PasswordEncoder passwordEncoder;
+    private final BigDecimal recyclerStartingBalance;
 
     public AdminService(AdminRepository adminRepository,
                         UserRepository userRepository,
                         MunicipalityRepository municipalityRepository,
                         CollectionPointRepository pointRepository,
-                        PasswordEncoder passwordEncoder) {
+                        PasswordEncoder passwordEncoder,
+                        @Value("${market.recycler-starting-balance:10000}")
+                        BigDecimal recyclerStartingBalance) {
         this.adminRepository = adminRepository;
         this.userRepository = userRepository;
         this.municipalityRepository = municipalityRepository;
         this.pointRepository = pointRepository;
         this.passwordEncoder = passwordEncoder;
+        this.recyclerStartingBalance = recyclerStartingBalance;
     }
 
     @Transactional(readOnly = true)
@@ -195,6 +200,10 @@ public class AdminService {
         user.setCreatedBy(actor.getId());
         user.setEmailVerified(true);
         user.setActive(true);
+
+        if (request.getRole() == Role.RECYCLER) {
+            user.setWalletBalance(recyclerStartingBalance);
+        }
 
         userRepository.save(user);
         log.info("{} {} created a {} account for {}", actor.getRole(), actor.getId(),

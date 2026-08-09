@@ -5,9 +5,14 @@ import 'package:greentech/Model/Detection.dart';
 import 'package:greentech/Widget/UiKit.dart';
 
 class ScanResultView extends StatelessWidget {
-  const ScanResultView({super.key, required this.detection});
+  const ScanResultView({
+    super.key,
+    required this.detection,
+    this.showRewards = true,
+  });
 
   final Detection detection;
+  final bool showRewards;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +37,9 @@ class ScanResultView extends StatelessWidget {
             child: _OfferHero(offer: offer),
           ),
         ],
-        if (detection.eligible && detection.totalRewardPoints > 0) ...[
+        if (showRewards &&
+            detection.eligible &&
+            detection.totalRewardPoints > 0) ...[
           const SizedBox(height: 24),
           FadeSlideIn(
             delayMs: delay(),

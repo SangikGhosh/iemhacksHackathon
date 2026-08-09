@@ -2,6 +2,7 @@ package com.iem.pickup;
 
 import com.iem.auth.UserRepository;
 import com.iem.detection.DetectionRepository;
+import com.iem.enums.ListingStatus;
 import com.iem.enums.PickupMode;
 import com.iem.enums.PickupStatus;
 import com.iem.geo.CollectionPointService;
@@ -9,6 +10,7 @@ import com.iem.model.CollectionPoint;
 import com.iem.enums.Role;
 import com.iem.exception.ApiException;
 import com.iem.mail.MailService;
+import com.iem.market.ListingRepository;
 import com.iem.model.Detection;
 import com.iem.model.Pickup;
 import com.iem.model.User;
@@ -41,6 +43,7 @@ public class PickupService {
     private final UserRepository userRepository;
     private final MailService mailService;
     private final CollectionPointService collectionPointService;
+    private final ListingRepository listingRepository;
     private final int doorstepPointsPerKg;
     private final int dropOffPointsPerKg;
     private final int completionBonus;
@@ -50,6 +53,7 @@ public class PickupService {
                          UserRepository userRepository,
                          MailService mailService,
                          CollectionPointService collectionPointService,
+                         ListingRepository listingRepository,
                          @org.springframework.beans.factory.annotation.Value("${rewards.doorstep-points-per-kg:5}") int doorstepPointsPerKg,
                          @org.springframework.beans.factory.annotation.Value("${rewards.dropoff-points-per-kg:8}") int dropOffPointsPerKg,
                          @org.springframework.beans.factory.annotation.Value("${rewards.completion-bonus:20}") int completionBonus) {
@@ -58,9 +62,17 @@ public class PickupService {
         this.userRepository = userRepository;
         this.mailService = mailService;
         this.collectionPointService = collectionPointService;
+        this.listingRepository = listingRepository;
         this.doorstepPointsPerKg = doorstepPointsPerKg;
         this.dropOffPointsPerKg = dropOffPointsPerKg;
         this.completionBonus = completionBonus;
+    }
+
+    private UUID resolveMunicipality(UUID userId, Double lat, Double lon) {
+        UUID fromProfile = userRepository.findById(userId)
+                .map(User::getMunicipalityId)
+                .orElse(null);
+        return fromProfile != null ? fromProfile : collectionPointService.municipalityNear(lat, lon);
     }
 
     @Transactional
@@ -80,6 +92,13 @@ public class PickupService {
 
         if (pickupRepository.existsByDetectionIdAndStatusNot(detection.getId(), PickupStatus.CANCELLED)) {
             throw new ApiException("A pickup already exists for this scan", 409);
+        }
+
+        if (listingRepository.existsByDetectionIdAndStatusIn(detection.getId(),
+                List.of(ListingStatus.OPEN, ListingStatus.SOLD))) {
+            throw new ApiException(
+                    "This scan is listed on the marketplace. Withdraw the listing first if you "
+                            + "would rather a collector took it.", 409);
         }
 
         PickupMode mode = request.getMode() == null ? PickupMode.DOORSTEP : request.getMode();
@@ -122,6 +141,8 @@ public class PickupService {
             pickup.setContactPhone(request.getContactPhone().trim());
             pickup.setLatitude(request.getLatitude());
             pickup.setLongitude(request.getLongitude());
+            pickup.setMunicipalityId(resolveMunicipality(userId,
+                    request.getLatitude(), request.getLongitude()));
         }
 
         pickup.setRewardPoints(rewardFor(mode, pickup.getEstimatedWeightKg()));
@@ -330,7 +351,12 @@ public class PickupService {
                 ? finalWeightKg
                 : pickup.getEstimatedWeightKg();
 
-        int points = rewardFor(pickup.getMode(), weight) + completionBonus;
+        Detection detection = detectionRepository.findById(pickup.getDetectionId()).orElse(null);
+        int segregationPoints = detection != null && !detection.isPointsAwarded()
+                ? detection.getTotalRewardPoints()
+                : 0;
+
+        int points = rewardFor(pickup.getMode(), weight) + completionBonus + segregationPoints;
         pickup.setRewardPoints(points);
 
         if (points <= 0) {
@@ -341,9 +367,16 @@ public class PickupService {
             user.setPoints(user.getPoints() + points);
             userRepository.save(user);
             pickup.setRewardAwarded(true);
+
+            if (segregationPoints > 0) {
+                detection.setPointsAwarded(true);
+                detectionRepository.save(detection);
+            }
+
             log.info("Awarded {} green points to user {} for a completed {} pickup "
-                            + "({} bonus + weight)",
-                    points, pickup.getUserId(), pickup.getMode(), completionBonus);
+                            + "({} bonus + weight + {} from the scan)",
+                    points, pickup.getUserId(), pickup.getMode(), completionBonus,
+                    segregationPoints);
         });
     }
 

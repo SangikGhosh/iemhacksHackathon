@@ -292,6 +292,8 @@ class GeoRoutingTests {
                         auth(collectorToken)), Map.class);
 
         int after = userRepository.findById(citizen.getId()).orElseThrow().getPoints();
-        assertEquals(before + 44, after, "20 completion bonus + 3 kg weighed at 8 points/kg");
+        assertEquals(before + 109, after,
+                "20 completion bonus + 3 kg weighed at 8 points/kg + the 65 segregation "
+                        + "points the scan was worth, all credited on completion");
     }
 }

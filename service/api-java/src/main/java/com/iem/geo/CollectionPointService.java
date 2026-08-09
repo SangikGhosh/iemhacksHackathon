@@ -121,6 +121,23 @@ public class CollectionPointService {
     }
 
     @Transactional(readOnly = true)
+    public UUID municipalityNear(Double lat, Double lon) {
+
+        if (lat == null || lon == null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+            return null;
+        }
+
+        double latDelta = searchRadiusKm / 111.32;
+        double lonDelta = searchRadiusKm / (111.32 * Math.cos(Math.toRadians(lat)));
+
+        return pointRepository.findInBox(lat - latDelta, lat + latDelta, lon - lonDelta, lon + lonDelta)
+                .stream()
+                .min(Comparator.comparingDouble(p -> haversineKm(lat, lon, p.getLat(), p.getLon())))
+                .map(p -> p.getMunicipality().getId())
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
     public List<CollectionPointResponse> all() {
         return pointRepository.findAllActive().stream()
                 .map(p -> CollectionPointResponse.of(p, null, null, null))

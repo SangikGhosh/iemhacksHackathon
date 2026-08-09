@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.UUID;
 
 public interface ListingRepository extends JpaRepository<Listing, UUID> {
@@ -21,6 +22,15 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
     Page<Listing> findByBuyerId(UUID buyerId, Pageable pageable);
 
     boolean existsByDetectionIdAndStatus(UUID detectionId, ListingStatus status);
+
+    boolean existsByDetectionIdAndStatusIn(UUID detectionId, Collection<ListingStatus> statuses);
+
+    @Query("""
+           select l from Listing l
+            where l.status = com.iem.enums.ListingStatus.OPEN
+              and (:material is null or lower(l.material) like :material)
+           """)
+    Page<Listing> browseOpen(@Param("material") String material, Pageable pageable);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
