@@ -12,6 +12,10 @@ import 'package:greentech/Service/ToastService.dart';
 import 'package:greentech/Widget/GoogleMark.dart';
 import 'package:greentech/Widget/UiKit.dart';
 
+const AssetImage authBackgroundImage = AssetImage(
+  'Assets/image/AuthScreenImage.jpg',
+);
+
 class AuthSelectionScreen extends ConsumerStatefulWidget {
   const AuthSelectionScreen({super.key});
 
@@ -37,7 +41,21 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset('Assets/image/AuthScreenImage.jpg', fit: BoxFit.cover),
+            const ColoredBox(color: Color(0xFF101512), child: SizedBox.expand()),
+
+            Image(
+              image: authBackgroundImage,
+              fit: BoxFit.cover,
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                if (wasSynchronouslyLoaded) return child;
+                return AnimatedOpacity(
+                  opacity: frame == null ? 0 : 1,
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOut,
+                  child: child,
+                );
+              },
+            ),
 
             const DecoratedBox(
               decoration: BoxDecoration(
@@ -71,7 +89,7 @@ class _AuthSelectionScreenState extends ConsumerState<AuthSelectionScreen> {
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 25,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w200,
                         letterSpacing: -0.6,
                         height: 1.28,
                       ),
@@ -183,11 +201,12 @@ class _HeaderLogo extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Icon(Icons.recycling_rounded, color: Colors.white, size: 48),
+        Image.asset(
+          'Assets/image/AppLogoMark.png',
+          width: 34,
+          fit: BoxFit.contain,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         const Text(
           'Green Route',
           style: TextStyle(
