@@ -23,7 +23,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to server
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # /opt is root-owned, so the directory is created once with sudo and handed to the deploy
+      # user. This runs before the copy because scp cannot create it.
+      - name: Prepare deployment directory
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script_stop: true
+          script: |
+            if [ ! -d /opt/greentech ]; then
+              sudo mkdir -p /opt/greentech
+              sudo chown "$(id -u):$(id -g)" /opt/greentech
+            fi
+
+      # Copied rather than generated on the server. Writing YAML from a heredoc nested inside a
+      # shell script inside a workflow block scalar is three levels of quoting, and any mistake
+      # surfaces as a compose parser error that points at the wrong line.
+      - name: Copy compose file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: deploy/docker-compose.prod.yml
+          target: /opt/greentech
+          strip_components: 1
+
+      - name: Deploy
         uses: appleboy/ssh-action@v1.2.0
         env:
           ENV_JAVA: ${{ secrets.ENV_JAVA }}
@@ -38,88 +69,39 @@ jobs:
 
           script: |
             set -e
-            # /opt is root-owned, so the directory is created once with sudo and handed to the
-            # deploy user. Everything after this runs unprivileged.
-            if [ ! -d /opt/greentech ]; then
-              sudo mkdir -p /opt/greentech
-              sudo chown "$(id -u):$(id -g)" /opt/greentech
-            fi
             cd /opt/greentech
+            mv -f docker-compose.prod.yml docker-compose.yml
 
-            # Both env files are stored as ONE secret each rather than one secret per key.
-            # Per-key secrets would force this script to enumerate every variable, and adding
-            # a new one later would silently ship an empty value to production. They also
-            # collide: APP_PORT exists in both services with different values.
-            #
-            # Quoted heredoc: the content is injected by the SSH action as an environment
-            # variable, so the shell must not expand anything inside it — several values
-            # legitimately contain $ and other shell metacharacters.
+            # Each service's environment is ONE secret rather than one secret per key. Per-key
+            # secrets would force this script to enumerate every variable, so adding a new one
+            # later would silently ship an empty value to production. They also collide:
+            # APP_PORT exists in both services with different values.
             umask 077
             printf '%s\n' "$ENV_JAVA"   > .env.java
             printf '%s\n' "$ENV_PYTHON" > .env.python
 
+            # Compose reads this file for ${DOCKER_USER} substitution in the compose file.
+            printf 'DOCKER_USER=%s\n' "$DOCKER_USER" > .env
+
             for f in .env.java .env.python; do
               if [ ! -s "$f" ]; then
-                echo "::error::$f is empty — check the ENV_* repository secrets"
+                echo "$f is empty — check the ENV_* repository secrets"
                 exit 1
               fi
             done
 
-            # Written here so the server topology always matches the repository. Quoted
-            # delimiter: nothing in this file needs shell expansion.
-            cat > docker-compose.yml <<EOF
-            name: greentech
-
-            services:
-              api-python:
-                image: ${DOCKER_USER}/greentech-api-python:latest
-                container_name: greentech-api-python
-                restart: unless-stopped
-                env_file:
-                  - ./.env.python
-                environment:
-                  APP_PORT: 8000
-                ports:
-                  - "9799:8000"
-                networks:
-                  - greentech
-
-              api-java:
-                image: ${DOCKER_USER}/greentech-api-java:latest
-                container_name: greentech-api-java
-                restart: unless-stopped
-                depends_on:
-                  api-python:
-                    condition: service_healthy
-                env_file:
-                  - ./.env.java
-                environment:
-                  APP_PORT: 8080
-                  DB_HOST: host.docker.internal
-                  DETECTION_BASE_URL: http://api-python:8000
-                extra_hosts:
-                  - "host.docker.internal:host-gateway"
-                ports:
-                  - "9798:8080"
-                networks:
-                  - greentech
-
-            networks:
-              greentech:
-                driver: bridge
-            EOF
-
+            docker compose config --quiet
             docker compose pull
             docker compose up -d --remove-orphans
 
-            # Untagged layers accumulate fast — the python image carries torch and is several
+            # Untagged layers accumulate fast: the python image carries torch and is several
             # GB, so a handful of deploys would otherwise fill the disk.
             docker image prune -f
 
             echo "Waiting for both services to report healthy..."
             for i in $(seq 1 30); do
-              JAVA=$(curl -fsS http://127.0.0.1:9798/health 2>/dev/null || true)
-              PY=$(curl -fsS http://127.0.0.1:9799/health 2>/dev/null || true)
+              JAVA=$(curl -fsS -m 3 http://127.0.0.1:9798/health 2>/dev/null || true)
+              PY=$(curl -fsS -m 3 http://127.0.0.1:9799/health 2>/dev/null || true)
               if [ -n "$JAVA" ] && [ -n "$PY" ]; then
                 echo "api-java  : $JAVA"
                 echo "api-python: $PY"
@@ -128,7 +110,7 @@ jobs:
               sleep 10
             done
 
-            echo "::error::Services did not come up within 5 minutes"
+            echo "Services did not come up within 5 minutes"
             docker compose ps
             docker compose logs --tail 80
             exit 1
